@@ -76,7 +76,7 @@ export default function AuthScreen({ onLogin }) {
 
       <div style={S.logoWrap}>
         <div style={S.logoCircle}>
-          <img src="/default.jpg" alt="Logo" style={S.logoImg} />
+          <img src="/th.jpg" alt="Logo" style={S.logoImg} />
         </div>
         <div style={S.logoText}>{siteName}</div>
         <div style={S.logoSub}>India's #1 Premium Matka Platform</div>
