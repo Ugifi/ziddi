@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  scheduler.js  —  MatkaKing Auto Result Declarator
+//  scheduler.js  —  MatkaKing Auto Result Declarator (FIXED)
 //  Place this file in: backend/scheduler.js
 //  Import in server.js: require('./scheduler');
 // ─────────────────────────────────────────────────────────────────────────────
@@ -9,7 +9,7 @@ process.env.TZ = 'Asia/Kolkata';
 const cron = require('node-cron');
 const db   = require('./config/db');
 
-// ── GAME PAYOUTS (same as admin.js) ──────────────────────────────────────────
+// ── GAME PAYOUTS ──────────────────────────────────────────────────────────────
 const GAME_PAYOUTS = {
   single_digit:      9,  jodi:            90,  single_pana:   150,
   double_pana:     300,  triple_pana:    600,  half_sangam_a: 1500,
@@ -25,10 +25,6 @@ const GAME_PAYOUTS = {
 };
 
 // ── VALID PANAS ───────────────────────────────────────────────────────────────
-// Single pana: 3 digit combos jinka sum mod 10 = digit
-// Double pana: 2 same digits
-// Triple pana: all same digits
-
 function generateAllPanas() {
   const sp = [], dp = [], tp = [];
   for (let i = 0; i <= 9; i++) {
@@ -36,9 +32,9 @@ function generateAllPanas() {
       for (let k = j; k <= 9; k++) {
         const num = `${i}${j}${k}`;
         const unique = new Set([i, j, k]).size;
-        if (unique === 3) sp.push(num);       // single pana
-        else if (unique === 2) dp.push(num);  // double pana
-        else tp.push(num);                    // triple pana
+        if (unique === 3) sp.push(num);
+        else if (unique === 2) dp.push(num);
+        else tp.push(num);
       }
     }
   }
@@ -48,29 +44,22 @@ function generateAllPanas() {
 const { sp: SINGLE_PANAS, dp: DOUBLE_PANAS, tp: TRIPLE_PANAS } = generateAllPanas();
 const ALL_PANAS = [...SINGLE_PANAS, ...DOUBLE_PANAS, ...TRIPLE_PANAS];
 
-// Digit from pana sum
 function panaDigit(pana) {
   return String(pana.split('').reduce((a, b) => a + parseInt(b), 0) % 10);
 }
 
 // ── MINIMUM PAYOUT ALGORITHM ──────────────────────────────────────────────────
-// Candidates: all 0-9 digits for open/close, all panas for pana bets
-// For each candidate result → calculate total payout → pick lowest payout one
-
 async function findBestResult(gameId, session) {
-  // Get all pending bids for this game+session
   const [bids] = await db.query(
     "SELECT game_type, number, amount FROM bids WHERE game_id = ? AND session = ? AND status = 'pending'",
     [gameId, session]
   );
 
   if (bids.length === 0) {
-    // Koi bid nahi → pure random result
     const randomPana = ALL_PANAS[Math.floor(Math.random() * ALL_PANAS.length)];
     return randomPana;
   }
 
-  // Try all possible 3-digit pana results (open/close result format)
   let bestResult = null;
   let minPayout  = Infinity;
 
@@ -92,7 +81,6 @@ async function findBestResult(gameId, session) {
         case 'open_close':
           wins = String(bid.number) === candidateDigit;
           break;
-
         case 'single_pana':
         case 'single_pana_bulk':
         case 'sp_motor':
@@ -101,18 +89,15 @@ async function findBestResult(gameId, session) {
         case 'sp_dp_tp':
           wins = SINGLE_PANAS.includes(bid.number) && bid.number === candidate;
           break;
-
         case 'double_pana':
         case 'double_pana_bulk':
         case 'dp_motor':
           wins = DOUBLE_PANAS.includes(bid.number) && bid.number === candidate;
           break;
-
         case 'triple_pana':
         case 'tp_motor':
           wins = TRIPLE_PANAS.includes(bid.number) && bid.number === candidate;
           break;
-
         default:
           wins = String(bid.number) === candidateDigit;
       }
@@ -129,7 +114,7 @@ async function findBestResult(gameId, session) {
   return bestResult || ALL_PANAS[Math.floor(Math.random() * ALL_PANAS.length)];
 }
 
-// ── DECLARE RESULT (same logic as admin.js PUT /games/:id/result) ─────────────
+// ── DECLARE RESULT ────────────────────────────────────────────────────────────
 async function declareResult(game, openResult, closeResult) {
   const openDigit  = parseInt(openResult.split('').reduce((a, b) => a + parseInt(b), 0)) % 10;
   const closeDigit = parseInt(closeResult.split('').reduce((a, b) => a + parseInt(b), 0)) % 10;
@@ -139,13 +124,11 @@ async function declareResult(game, openResult, closeResult) {
   try {
     await conn.beginTransaction();
 
-    // Update game
     await conn.query(
       `UPDATE games SET open_result=?, close_result=?, jodi_result=?, status='closed', result_declared_at=NOW() WHERE id=?`,
       [openResult, closeResult, jodiResult, game.id]
     );
 
-    // Get all pending bids
     const [bids] = await conn.query(
       "SELECT * FROM bids WHERE game_id = ? AND status = 'pending'",
       [game.id]
@@ -177,7 +160,6 @@ async function declareResult(game, openResult, closeResult) {
         case 'digit_jodi':
           isWinner = bid.number === jodiResult;
           break;
-
         case 'single_pana':
         case 'single_pana_bulk':
         case 'double_pana':
@@ -191,28 +173,23 @@ async function declareResult(game, openResult, closeResult) {
         case 'panel_group':
           isWinner = bid.number === result;
           break;
-
         case 'full_sangam':
         case 'choice_sangam':
           isWinner = bid.number === `${openResult}-${closeResult}`;
           break;
-
         case 'half_sangam_a':
           isWinner = bid.number === `${openResult}-${closeDigit}`;
           break;
-
         case 'half_sangam_b':
           isWinner = bid.number === `${openDigit}-${closeResult}`;
           break;
-
         case 'odd_even':
-          isWinner = (bid.number === 'odd' && openDigit % 2 !== 0) || (bid.number === 'even' && openDigit % 2 === 0);
+          isWinner = (bid.number === 'odd' && openDigit % 2 !== 0) ||
+                     (bid.number === 'even' && openDigit % 2 === 0);
           break;
-
         case 'jackpot':
           isWinner = bid.number === result;
           break;
-
         default:
           isWinner = bid.number === result;
       }
@@ -247,7 +224,8 @@ async function declareResult(game, openResult, closeResult) {
   }
 }
 
-// ── OPEN RESULT DECLARE (at open_time) ───────────────────────────────────────
+// ── OPEN RESULT DECLARE ───────────────────────────────────────────────────────
+// ✅ FIX: result_declared_at check hataya — ab correctly kaam karega
 async function processOpenResults() {
   try {
     const now = new Date();
@@ -255,15 +233,11 @@ async function processOpenResults() {
     const mm  = String(now.getMinutes()).padStart(2, '0');
     const currentTime = `${hh}:${mm}:00`;
 
-    // Games jinka open_time aaj ka current minute match kare,
-    // open_result abhi NULL ho (admin ne declare nahi kiya),
-    // aur status open ho
     const [games] = await db.query(
       `SELECT * FROM games
        WHERE status = 'open'
          AND open_result IS NULL
-         AND TIME_FORMAT(open_time, '%H:%i:00') = ?
-         AND DATE(IFNULL(result_declared_at, '2000-01-01')) < CURDATE()`,
+         AND TIME_FORMAT(open_time, '%H:%i:00') = ?`,
       [currentTime]
     );
 
@@ -271,7 +245,6 @@ async function processOpenResults() {
       console.log(`🕐 [AUTO OPEN] ${game.name} — Finding best open result...`);
       const openResult = await findBestResult(game.id, 'open');
 
-      // Sirf open_result update karo, game open rakhon close ke liye
       await db.query(
         `UPDATE games SET open_result = ? WHERE id = ?`,
         [openResult, game.id]
@@ -283,7 +256,8 @@ async function processOpenResults() {
   }
 }
 
-// ── CLOSE RESULT DECLARE (at result_time) ────────────────────────────────────
+// ── CLOSE RESULT DECLARE ──────────────────────────────────────────────────────
+// ✅ FIX: result_declared_at check hataya — ab correctly kaam karega
 async function processCloseResults() {
   try {
     const now = new Date();
@@ -291,21 +265,17 @@ async function processCloseResults() {
     const mm  = String(now.getMinutes()).padStart(2, '0');
     const currentTime = `${hh}:${mm}:00`;
 
-    // Games jinka result_time current minute match kare,
-    // close_result NULL ho (admin ne declare nahi kiya)
     const [games] = await db.query(
       `SELECT * FROM games
        WHERE status = 'open'
          AND close_result IS NULL
-         AND TIME_FORMAT(result_time, '%H:%i:00') = ?
-         AND DATE(IFNULL(result_declared_at, '2000-01-01')) < CURDATE()`,
+         AND TIME_FORMAT(result_time, '%H:%i:00') = ?`,
       [currentTime]
     );
 
     for (const game of games) {
       console.log(`🕐 [AUTO CLOSE] ${game.name} — Finding best close result...`);
 
-      // Agar open_result abhi bhi NULL hai toh pehle woh bhi set karo
       let openResult = game.open_result;
       if (!openResult) {
         openResult = await findBestResult(game.id, 'open');
@@ -313,8 +283,6 @@ async function processCloseResults() {
       }
 
       const closeResult = await findBestResult(game.id, 'close');
-
-      // Full result declare karo + winners credit karo
       await declareResult(game, openResult, closeResult);
     }
   } catch (err) {
@@ -323,7 +291,6 @@ async function processCloseResults() {
 }
 
 // ── DAILY RESET (midnight) ────────────────────────────────────────────────────
-// Roz raat 12 baje sab games reset ho jaayein agले din ke liye
 async function dailyReset() {
   try {
     await db.query(
@@ -342,17 +309,14 @@ async function dailyReset() {
 }
 
 // ── CRON JOBS ─────────────────────────────────────────────────────────────────
-// Har minute check karo open results
 cron.schedule('* * * * *', () => {
   processOpenResults();
 }, { timezone: 'Asia/Kolkata' });
 
-// Har minute check karo close results
 cron.schedule('* * * * *', () => {
   processCloseResults();
 }, { timezone: 'Asia/Kolkata' });
 
-// Roz raat 12:00 AM reset
 cron.schedule('0 0 * * *', () => {
   dailyReset();
 }, { timezone: 'Asia/Kolkata' });
