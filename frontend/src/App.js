@@ -97,7 +97,7 @@ function LanguageScreen({ onSelect }) {
 
       {/* Logo */}
       <div style={{ width:100, height:100, borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'2px solid rgba(255,215,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, boxShadow:'0 8px 32px rgba(0,0,0,0.25)', overflow:'hidden' }}>
-        <img src="logo.jpg" alt="Logo" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+        <img src={`${process.env.PUBLIC_URL}/th.jpg`} alt="Logo" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
       </div>
 
       <div style={{ color:'#fff', fontSize:26, fontWeight:900, letterSpacing:2, marginBottom:4, textShadow:'0 2px 10px rgba(0,0,0,0.3)' }}>MATKA BOSS</div>
@@ -469,7 +469,7 @@ export default function App() {
   const [selectedGame, setSelectedGame]   = useState(null);
   const [selectedType, setSelectedType]   = useState(null);
   const [page, setPage]                   = useState('home');
-  const [adminLoggedIn, setAdminLoggedIn] = useState(false);
+  const [adminLoggedIn, setAdminLoggedIn] = useState(() => !!localStorage.getItem('mk_token') && localStorage.getItem('mk_admin_logged') === '1');
   const [siteName, setSiteName]           = useState('SATTA KING');
   const [showNotices, setShowNotices]     = useState(false);
   const [noticesData, setNoticesData]     = useState([]);
@@ -585,7 +585,7 @@ export default function App() {
   };
 
   if (isAdmin) {
-    if (!adminLoggedIn) return <AdminLogin onLogin={() => setAdminLoggedIn(true)} />;
+    if (!adminLoggedIn) return <AdminLogin onLogin={() => { localStorage.setItem('mk_admin_logged', '1'); setAdminLoggedIn(true); }} />;
     return <AdminPanel onLogout={() => setAdminLoggedIn(false)} />;
   }
 
