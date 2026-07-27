@@ -83,7 +83,7 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
   const handlePayWithApp = () => {
     const amt = parseFloat(amount);
     if (!upiId) { setMsg({ type: 'err', text: '❌ UPI ID load nahi hui. Dobara try karo.' }); return; }
-    const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('MatkaKing')}&am=${amt}&cu=INR&tn=${encodeURIComponent('MatkaKing Deposit')}`;
+    const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('MatkaKing')}&am=${amt}&cu=INR&tn=${encodeURIComponent('Safe & Secure Payment')}`;
     window.location.href = link;
   };
 
