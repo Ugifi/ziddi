@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API = 'https://ziddi-1-we11.onrender.com';
 
 // MySQL UTC store karta hai — IST = UTC + 5:30
 function toIST(dateStr) {
