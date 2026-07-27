@@ -8,11 +8,13 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const db = require('./config/db');
-const authRoutes   = require('./routes/auth');
-const gamesRoutes  = require('./routes/games');
-const walletRoutes = require('./routes/wallet');
-const adminRoutes  = require('./routes/admin');
+const authRoutes    = require('./routes/auth');
+const gamesRoutes   = require('./routes/games');
+const walletRoutes  = require('./routes/wallet');
+const adminRoutes   = require('./routes/admin');
+const scraperRoutes = require('./routes/scraper'); // ✅ NEW
 require('./scheduler');
+
 const app = express();
 
 app.use(helmet());
@@ -39,10 +41,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.use('/api/auth',   authLimiter, authRoutes);
-app.use('/api/games',  gamesRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/admin',  adminRoutes);
+app.use('/api/auth',    authLimiter, authRoutes);
+app.use('/api/games',   gamesRoutes);
+app.use('/api/wallet',  walletRoutes);
+app.use('/api/admin',   adminRoutes);
+app.use('/api/scraper', scraperRoutes); // ✅ NEW
 
 app.get('/', (req, res) => {
   res.json({
@@ -53,7 +56,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// ✅ FIX: site_name add kiya
 app.get('/api/payment-info', async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -80,7 +82,6 @@ app.get('/create-admin', async (req, res) => {
   try {
     const [existing] = await db.query('SELECT id FROM users WHERE role = "admin"');
     if (existing.length) return res.json({ success: false, message: 'Admin already exists. Login: 9999999999 / admin123' });
-
     const hashed = await bcrypt.hash('admin123', 10);
     await db.query(
       'INSERT INTO users (name, mobile, password, role, wallet_balance, winning_balance) VALUES (?, ?, ?, "admin", 0, 0)',
