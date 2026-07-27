@@ -69,6 +69,96 @@ const IconSupport = ({ size = 24, color = 'currentColor' }) => (
   </svg>
 );
 
+// ── LANGUAGE SELECTION SCREEN ─────────────────────────────────────────────────
+function LanguageScreen({ onSelect }) {
+  const languages = [
+    { label: 'English', val: 'en' },
+    { label: 'हिन्दी', val: 'hi' },
+    { label: 'తెలుగు', val: 'te' },
+    { label: 'ಕನ್ನಡ', val: 'kn' },
+  ];
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0d1b5e 0%, #1a2f8f 60%, #1565C0 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+      fontFamily: '"Segoe UI", sans-serif',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Background circles */}
+      <div style={{ position:'absolute', top:'-5%', left:'-10%', width:300, height:300, borderRadius:'50%', background:'rgba(255,255,255,0.05)', filter:'blur(60px)' }}/>
+      <div style={{ position:'absolute', bottom:'-10%', right:'-10%', width:350, height:350, borderRadius:'50%', background:'rgba(255,215,0,0.08)', filter:'blur(70px)' }}/>
+
+      {/* Logo */}
+      <div style={{ width:100, height:100, borderRadius:'50%', background:'rgba(255,255,255,0.15)', border:'2px solid rgba(255,215,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16, boxShadow:'0 8px 32px rgba(0,0,0,0.25)', overflow:'hidden' }}>
+        <img src="logo.jpg" alt="Logo" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+      </div>
+
+      <div style={{ color:'#fff', fontSize:26, fontWeight:900, letterSpacing:2, marginBottom:4, textShadow:'0 2px 10px rgba(0,0,0,0.3)' }}>MATKA BOSS</div>
+      <div style={{ color:'#FFD700', fontSize:12, fontWeight:700, letterSpacing:1, marginBottom:40 }}>India's #1 Premium Matka Platform</div>
+
+      {/* Select Language Title */}
+      <div style={{ color:'#fff', fontSize:22, fontWeight:800, marginBottom:6 }}>Select your</div>
+      <div style={{ color:'#FFD700', fontSize:28, fontWeight:900, marginBottom:32, letterSpacing:1 }}>Language</div>
+
+      {/* Language Buttons Grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, width:'100%', maxWidth:320 }}>
+        {languages.map(l => (
+          <button key={l.val} onClick={() => onSelect(l.val)}
+            style={{
+              padding: '20px 0',
+              borderRadius: 16,
+              border: '2px solid rgba(255,255,255,0.3)',
+              background: 'rgba(255,255,255,0.12)',
+              color: '#fff',
+              fontSize: 18,
+              fontWeight: 800,
+              cursor: 'pointer',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+              letterSpacing: 0.5
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.25)'; e.currentTarget.style.transform='scale(1.04)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.transform='scale(1)'; }}>
+            {l.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Marathi button - centered below */}
+      <button onClick={() => onSelect('mr')}
+        style={{
+          marginTop: 14,
+          padding: '20px 80px',
+          borderRadius: 16,
+          border: '2px solid rgba(255,255,255,0.3)',
+          background: 'rgba(255,255,255,0.12)',
+          color: '#fff',
+          fontSize: 18,
+          fontWeight: 800,
+          cursor: 'pointer',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+          letterSpacing: 0.5,
+          transition: 'all 0.2s'
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.25)'; e.currentTarget.style.transform='scale(1.04)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)'; e.currentTarget.style.transform='scale(1)'; }}>
+        मराठी
+      </button>
+
+      <div style={{ color:'rgba(255,255,255,0.4)', fontSize:11, marginTop:40, fontWeight:600 }}>18+ Only · Play Responsibly</div>
+    </div>
+  );
+}
+
 // ── BLUE DRAWER ───────────────────────────────────────────────────────────────
 function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
   const menuItems = [
@@ -84,7 +174,7 @@ function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
     { ic: '💬', label: 'WhatsApp Support',    id: 'wa',  action: () => window.open('https://wa.me/919999999999','_blank') },
     { ic: '✈️', label: 'Telegram Support',   id: 'tg',  action: () => window.open('https://t.me/matkaking_support','_blank') },
     { ic: '📖', label: 'How to Play',         id: 'htp' },
-{ ic: '🎰', label: 'Game Rates',          id: 'gamerates' },
+    { ic: '🎰', label: 'Game Rates',          id: 'gamerates' },
     { ic: '❓', label: 'FAQ',                 id: 'faq' },
     { ic: '📜', label: 'Terms & Conditions',  id: 'terms' },
     { ic: '🔒', label: 'Privacy Policy',      id: 'privacy' },
@@ -99,7 +189,6 @@ function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
           .drawer-menu-item:hover { background: #EEF4FF !important; transform: translateX(4px); }
         `}</style>
 
-        {/* Drawer Header — Blue */}
         <div style={{ background:'linear-gradient(135deg, #1565C0, #1976D2)', padding:'20px 16px 16px', display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
             <div style={{ width:50, height:50, borderRadius:'50%', background:'rgba(255,255,255,0.2)', border:'2px solid rgba(255,255,255,0.5)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
@@ -116,7 +205,6 @@ function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
           <div onClick={onClose} style={{ color:'rgba(255,255,255,0.85)', fontSize:22, cursor:'pointer', padding:'2px 4px', lineHeight:1 }}>✕</div>
         </div>
 
-        {/* Quick Action Grid */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, padding:'14px 12px', borderBottom:'1px solid #E3EAFF' }}>
           {[{ ic:'💰', label:'Add Fund', id:'add' }, { ic:'💸', label:'Withdraw', id:'with' }, { ic:'🎯', label:'My Bids', id:'bids' }].map(btn => (
             <div key={btn.id} onClick={() => { onNav(btn.id); onClose(); }}
@@ -129,7 +217,6 @@ function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
           ))}
         </div>
 
-        {/* Menu Items */}
         {menuItems.map((item, i) => {
           if (item.section) return (
             <div key={i} style={{ fontSize:10, color:'#90CAF9', letterSpacing:2, textTransform:'uppercase', padding:'14px 16px 4px', fontWeight:700 }}>{item.section}</div>
@@ -145,7 +232,6 @@ function BlueDrawer({ user, onClose, onNav, onLogout, wallet }) {
           );
         })}
 
-        {/* Logout */}
         <div onClick={onLogout}
           style={{ display:'flex', alignItems:'center', gap:14, padding:'13px 16px', cursor:'pointer', marginTop:8, borderTop:'1px solid #E3EAFF' }}
           onMouseEnter={e => e.currentTarget.style.background = '#FFEBEE'}
@@ -191,7 +277,6 @@ function ProfileScreen({ user, showToast }) {
 
   return (
     <div style={{ background:'#F0F4FF', minHeight:'100vh', paddingBottom:80 }}>
-      {/* Profile Header — Blue */}
       <div style={{ background:'linear-gradient(135deg,#1565C0,#1976D2)', padding:'24px 20px', textAlign:'center', borderBottom:'3px solid #0D47A1' }}>
         <div style={{ width:72, height:72, background:'rgba(255,255,255,0.2)', border:'3px solid rgba(255,255,255,0.5)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 10px', fontSize:32 }}>
           {(user?.name || 'U').charAt(0).toUpperCase()}
@@ -260,16 +345,7 @@ function CategoryGamesScreen({ category, apiCategory, onPlay }) {
     <div style={{ background:'#f5f6fa', minHeight:'100vh', paddingBottom:80, fontFamily:"'Nunito','Segoe UI',sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        .cg-card {
-          background: #fff;
-          border-radius: 16px;
-          margin: 0 12px 12px;
-          overflow: visible;
-          box-shadow: 0 2px 10px rgba(21,101,192,0.08);
-          transition: transform 0.2s, box-shadow 0.2s;
-          border: 1px solid #BBDEFB;
-          padding: 14px 16px;
-        }
+        .cg-card { background: #fff; border-radius: 16px; margin: 0 12px 12px; overflow: visible; box-shadow: 0 2px 10px rgba(21,101,192,0.08); transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #BBDEFB; padding: 14px 16px; }
         .cg-card:hover { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(21,101,192,0.14); }
         .cg-card-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:4px; }
         .cg-card-name { font-family:'Nunito',sans-serif; font-size:18px; font-weight:900; color:#111; letter-spacing:0.5px; text-transform:uppercase; line-height:1.2; }
@@ -283,16 +359,7 @@ function CategoryGamesScreen({ category, apiCategory, onPlay }) {
         .cg-time-lbl { font-size:12px; color:#666; font-weight:600; margin-bottom:1px; }
         .cg-time-val { font-size:14px; font-weight:700; color:#1565C0; }
         .cg-divider-v { width:1px; height:32px; background:#BBDEFB; flex-shrink:0; }
-        .cg-play-circle {
-          width:48px; height:48px; border-radius:50%; border:none;
-          background:linear-gradient(135deg,#1565C0,#1E88E5);
-          color:#fff; font-size:17px;
-          display:flex; align-items:center; justify-content:center;
-          cursor:pointer; flex-shrink:0;
-          box-shadow:0 4px 14px rgba(21,101,192,0.40);
-          transition:transform 0.2s, box-shadow 0.2s;
-          margin-top:-28px;
-        }
+        .cg-play-circle { width:48px; height:48px; border-radius:50%; border:none; background:linear-gradient(135deg,#1565C0,#1E88E5); color:#fff; font-size:17px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; box-shadow:0 4px 14px rgba(21,101,192,0.40); transition:transform 0.2s, box-shadow 0.2s; margin-top:-28px; }
         .cg-play-circle:hover { transform:scale(1.1); box-shadow:0 6px 20px rgba(21,101,192,0.50); }
         .cg-play-circle:active { transform:scale(0.95); }
         .cg-section-label { padding:4px 12px 8px; font-size:13px; font-weight:800; color:#1565C0; letter-spacing:2px; text-transform:uppercase; display:flex; align-items:center; gap:6px; }
@@ -302,7 +369,6 @@ function CategoryGamesScreen({ category, apiCategory, onPlay }) {
         @keyframes cgSpin { to { transform:rotate(360deg); } }
       `}</style>
 
-      {/* Header — Blue */}
       <div style={{ background:'linear-gradient(135deg,#1565C0,#1976D2)', padding:'16px', textAlign:'center', borderBottom:'3px solid #0D47A1', boxShadow:'0 2px 12px rgba(21,101,192,0.3)' }}>
         <div style={{ fontSize:32, marginBottom:4 }}>
           {category === 'starline' ? '⭐' : category === 'jackpot' ? '🎰' : '🎯'}
@@ -333,7 +399,6 @@ function CategoryGamesScreen({ category, apiCategory, onPlay }) {
             <div key={g.id} className="cg-card">
               <div className="cg-card-top">
                 <div className="cg-card-name">{g.name}</div>
-                {/* Calendar icon — blue */}
                 <svg width="38" height="38" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0 }}>
                   <rect x="4" y="7" width="34" height="31" rx="4" stroke="#1565C0" strokeWidth="2.2" fill="#EEF4FF"/>
                   <path d="M4 15H38" stroke="#1565C0" strokeWidth="2.2"/>
@@ -384,6 +449,14 @@ function CategoryGamesScreen({ category, apiCategory, onPlay }) {
 export default function App() {
   const isAdmin = window.location.pathname === '/admin' || window.location.search.includes('admin=1');
 
+  // ✅ Language Selection — sirf pehli baar dikhega
+  const [language, setLanguage] = useState(() => localStorage.getItem('mk_language') || null);
+
+  const handleLanguageSelect = (lang) => {
+    localStorage.setItem('mk_language', lang);
+    setLanguage(lang);
+  };
+
   const [user, setUser]                   = useState(null);
   const [authLoading, setAuthLoading]     = useState(true);
   const [tab, setTab]                     = useState('home');
@@ -412,7 +485,6 @@ export default function App() {
     apiCall('/api/auth/profile')
       .then(res => {
         if (res?.success && res?.user) {
-          // Profile se fresh data lo — referral_code bhi include hoga
           setUser(prev => ({ ...prev, ...res.user }));
         } else {
           localStorage.removeItem('mk_token');
@@ -452,7 +524,6 @@ export default function App() {
     setUser(u);
     setWallet(0);
     walletRef.current = 0;
-    // Login ke baad fresh profile fetch karo — referral_code ensure karne ke liye
     setTimeout(() => {
       apiCall('/api/auth/profile')
         .then(res => { if (res?.success && res?.user) setUser(prev => ({ ...prev, ...res.user })); })
@@ -489,7 +560,6 @@ export default function App() {
     finally { bidSubmittingRef.current = false; }
   };
 
-  // ── CHANGE 2: referral validTabs mein add kiya ──
   const navigate = id => {
     setPage(id);
     const validTabs = ['home','bids','disawar','jackpot','wallet','profile','game','txns','support','referral'];
@@ -519,6 +589,9 @@ export default function App() {
     return <AdminPanel onLogout={() => setAdminLoggedIn(false)} />;
   }
 
+  // ✅ Language Screen — pehli baar dikhao
+  if (!language) return <LanguageScreen onSelect={handleLanguageSelect} />;
+
   if (authLoading) {
     return (
       <div style={{ height:'100vh', display:'flex', justifyContent:'center', alignItems:'center', background:'#EEF4FF', color:'#1565C0', fontSize:18, fontWeight:700 }}>
@@ -536,48 +609,22 @@ export default function App() {
   return (
     <>
       <style>{`
-        /* ── TOP NAV — Blue ── */
-        .topnav {
-          background: linear-gradient(135deg, #1565C0, #1976D2) !important;
-          border-bottom: 3px solid #0D47A1 !important;
-          box-shadow: 0 2px 12px rgba(21,101,192,0.35) !important;
-        }
+        .topnav { background: linear-gradient(135deg, #1565C0, #1976D2) !important; border-bottom: 3px solid #0D47A1 !important; box-shadow: 0 2px 12px rgba(21,101,192,0.35) !important; }
         .brand { color: #fff !important; text-shadow: 0 1px 6px rgba(0,0,0,0.15) !important; font-family: 'Baloo 2','Nunito',sans-serif !important; letter-spacing: 2px !important; }
         .back-btn { color: #fff !important; }
         .hamburger span { background: #fff !important; }
-        .tn-wallet {
-          background: rgba(255,255,255,0.18) !important;
-          border: 1.5px solid rgba(255,255,255,0.45) !important;
-          border-radius: 20px !important;
-        }
+        .tn-wallet { background: rgba(255,255,255,0.18) !important; border: 1.5px solid rgba(255,255,255,0.45) !important; border-radius: 20px !important; }
         .tn-wallet span { color: #fff !important; }
-        .tn-bell {
-          background: rgba(255,255,255,0.18) !important;
-          border: 1.5px solid rgba(255,255,255,0.35) !important;
-        }
+        .tn-bell { background: rgba(255,255,255,0.18) !important; border: 1.5px solid rgba(255,255,255,0.35) !important; }
         .bell-dot { background: #FF5722 !important; }
-
-        /* ── BOTTOM NAV — Blue active ── */
-        .botnav {
-          background: #fff !important;
-          border-top: 2px solid #BBDEFB !important;
-          box-shadow: 0 -4px 16px rgba(21,101,192,0.10) !important;
-        }
+        .botnav { background: #fff !important; border-top: 2px solid #BBDEFB !important; box-shadow: 0 -4px 16px rgba(21,101,192,0.10) !important; }
         .bn-item svg { color: #90CAF9; }
         .bn-item span:last-child { color: #555 !important; font-size: 10px !important; font-weight: 600 !important; font-family: sans-serif !important; letter-spacing: 0 !important; }
         .bn-item.active svg { color: #1565C0 !important; }
         .bn-item.active span:last-child { color: #1565C0 !important; font-weight: 700 !important; }
         .bn-item:hover { background: #EEF4FF !important; }
         .bn-item:hover svg { color: #1565C0 !important; }
-
-        /* ── HOME CENTER BUTTON — Blue ── */
-        .home-circle {
-          background: linear-gradient(135deg, #1565C0, #1E88E5) !important;
-          box-shadow: 0 4px 16px rgba(21,101,192,0.45) !important;
-          border: 3px solid #fff !important;
-        }
-
-        /* ── NOTIFICATION MODAL header — Blue ── */
+        .home-circle { background: linear-gradient(135deg, #1565C0, #1E88E5) !important; box-shadow: 0 4px 16px rgba(21,101,192,0.45) !important; border: 3px solid #fff !important; }
         .notif-modal-header { background: linear-gradient(135deg, #1565C0, #1976D2) !important; }
       `}</style>
 
@@ -624,8 +671,7 @@ export default function App() {
       {page === 'faq'        && <FAQPage onBack={() => setPage('home')} />}
       {page === 'terms'      && <TermsPage onBack={() => setPage('home')} />}
       {page === 'privacy'    && <PrivacyPage onBack={() => setPage('home')} />}
-{page === 'gamerates'  && <GameRatesPage onBack={() => setPage('home')} />}
-      {/* CHANGE 3: ReferralPage render */}
+      {page === 'gamerates'  && <GameRatesPage onBack={() => setPage('home')} />}
       {page === 'referral'   && <ReferralPage apiCall={apiCall} user={user} onBack={() => setPage('wallet')} />}
 
       {/* BOTTOM NAV */}
