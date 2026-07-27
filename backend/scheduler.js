@@ -325,4 +325,18 @@ console.log('🤖 [SCHEDULER] MatkaKing Auto Result System STARTED');
 console.log('   → Har minute: open/close result check');
 console.log('   → Raat 12 baje: daily reset');
 
+const cron = require('node-cron');
+const axios = require('axios');
+
+// Har 5 minute mein dpboss se result sync karo
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    const PORT = process.env.PORT || 5000;
+    const res  = await axios.get(`http://localhost:${PORT}/api/scraper/sync`);
+    console.log(`✅ Auto-sync: ${res.data.message}`);
+  } catch (e) {
+    console.log('❌ Auto-sync failed:', e.message);
+  }
+});
+
 module.exports = { declareResult, findBestResult };
