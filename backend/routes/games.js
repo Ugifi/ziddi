@@ -43,7 +43,6 @@ const GAME_TYPES = {
 };
 
 // ─── GET ALL GAMES (with optional category filter) ────────────────────────────
-// ?category=main | starline | disawar
 router.get('/', async (req, res) => {
   try {
     const category = req.query.category || null;
@@ -123,11 +122,57 @@ router.post('/bid', authMiddleware, [
 
     const game = games[0];
 
-    if (game.status !== 'open') {
+    // ── SESSION BASED BETTING RESTRICTION ────────────────────────────────────
+    //
+    //  State 1: open_result = NULL, close_result = NULL
+    //           → Market is open → OPEN session allowed, CLOSE session allowed
+    //
+    //  State 2: open_result = "450", close_result = NULL   (Running for close)
+    //           → Open result declare ho gaya
+    //           → OPEN session band karo (result aa gaya, ab open pe bet nahi)
+    //           → CLOSE session allow karo
+    //
+    //  State 3: open_result = "450", close_result = "679"  (Both declared)
+    //           → Dono results aa gaye → Closed for today
+    //           → Koi bhi session allow nahi
+    //
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const openDeclared  = !!game.open_result;
+    const closeDeclared = !!game.close_result;
+
+    // State 3: dono result aa gaye → band
+    if (openDeclared && closeDeclared) {
       await conn.rollback();
-      return res.status(400).json({ success: false, message: `Betting is ${game.status} for this game` });
+      return res.status(400).json({
+        success: false,
+        message: 'Game is closed for today. Results have been declared.'
+      });
     }
 
+    // Game status check (admin ne manually band kiya ho)
+    if (game.status !== 'open') {
+      await conn.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Betting is ${game.status} for this game`
+      });
+    }
+
+    // State 2: open result aa gaya → sirf close session allow
+    if (openDeclared && !closeDeclared) {
+      if (session === 'open') {
+        await conn.rollback();
+        return res.status(400).json({
+          success: false,
+          message: 'Open result has been declared. Only Close session betting is allowed now.'
+        });
+      }
+    }
+
+    // State 1: koi result nahi → dono allow (no extra check needed)
+
+    // ── BID AMOUNT LIMITS ────────────────────────────────────────────────────
     const gameMinBid = game.min_bid || minBid;
     const gameMaxBid = game.max_bid || maxBid;
     if (bidAmount < gameMinBid) {
@@ -139,13 +184,14 @@ router.post('/bid', authMiddleware, [
       return res.status(400).json({ success: false, message: `Maximum bid for this game: ₹${gameMaxBid}` });
     }
 
+    // ── BALANCE CHECK ────────────────────────────────────────────────────────
     const [users] = await conn.query(
       'SELECT wallet_balance, winning_balance FROM users WHERE id = ? FOR UPDATE',
       [req.user.id]
     );
     const user = users[0];
-    const walletBal = parseFloat(user.wallet_balance);
-    const winBal    = parseFloat(user.winning_balance);
+    const walletBal    = parseFloat(user.wallet_balance);
+    const winBal       = parseFloat(user.winning_balance);
     const totalBalance = walletBal + winBal;
 
     if (totalBalance < bidAmount) {
@@ -159,15 +205,15 @@ router.post('/bid', authMiddleware, [
     // wallet_balance se pehle kaato, phir winning_balance se
     let remainingDeduction = bidAmount;
     let walletDeducted = 0;
-    let winDeducted = 0;
+    let winDeducted    = 0;
 
     if (walletBal >= remainingDeduction) {
-      walletDeducted = remainingDeduction;
+      walletDeducted    = remainingDeduction;
       remainingDeduction = 0;
     } else {
-      walletDeducted = walletBal;
+      walletDeducted    = walletBal;
       remainingDeduction -= walletBal;
-      winDeducted = remainingDeduction;
+      winDeducted       = remainingDeduction;
     }
 
     await conn.query(
@@ -175,10 +221,9 @@ router.post('/bid', authMiddleware, [
       [walletDeducted, winDeducted, req.user.id]
     );
 
-    const payout = GAME_TYPES[game_type].payout;
+    const payout           = GAME_TYPES[game_type].payout;
     const potential_winning = bidAmount * payout;
 
-    // game_category bhi store karo description mein taaki admin mein dikh sake
     const categoryLabel = game.game_category === 'starline' ? '⭐ Starline' :
                           game.game_category === 'disawar'  ? '🎰 Disawar'  : '';
 
@@ -232,7 +277,6 @@ router.get('/bids/my', authMiddleware, async (req, res) => {
     const offset = (page - 1) * limit;
     const status = req.query.status || null;
 
-    // 1. Fetch Paginated Bids List
     let query = `
       SELECT b.id, b.game_type, b.session, b.number, b.amount, b.potential_winning,
              b.status, b.win_amount, b.created_at,
@@ -244,21 +288,19 @@ router.get('/bids/my', authMiddleware, async (req, res) => {
     const params = [req.user.id];
 
     if (status) { query += ' AND b.status = ?'; params.push(status); }
-    
+
     query += ' ORDER BY b.id DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     const [bids] = await db.query(query, params);
 
-    // 2. Count for Pagination
     const [count] = await db.query(
       'SELECT COUNT(*) as total FROM bids WHERE user_id = ?' + (status ? ' AND status = ?' : ''),
       status ? [req.user.id, status] : [req.user.id]
     );
 
-    // 3. Fetch EXACT Overall Stats for this user (Naya Add Kiya Hai)
     const [stats] = await db.query(
-      `SELECT 
+      `SELECT
         COUNT(id) as total_bids,
         SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) as won_bids,
         SUM(CASE WHEN status = 'loss' THEN 1 ELSE 0 END) as lost_bids,
@@ -271,7 +313,7 @@ router.get('/bids/my', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       bids,
-      summary: stats[0] || {}, // Frontend ko real stats bhej rahe hain
+      summary: stats[0] || {},
       pagination: { page, limit, total: count[0].total, pages: Math.ceil(count[0].total / limit) }
     });
   } catch (err) {
