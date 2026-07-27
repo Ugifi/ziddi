@@ -482,7 +482,7 @@ export default function AdminPanel({ onLogout }) {
       if (res.success) {
         showToast('✅ Password change ho gaya! Dobara login karo.');
         setPwForm({ oldPass: '', newPass: '', confirmPass: '' });
-        setTimeout(() => { localStorage.removeItem('mk_token'); localStorage.removeItem('mk_admin_user'); onLogout(); }, 2000);
+        setTimeout(() => { localStorage.removeItem('mk_token'); localStorage.removeItem('mk_admin_user'); localStorage.removeItem('mk_admin_logged'); onLogout(); }, 2000);
       } else {
         showToast('❌ ' + (res.message || 'Password change failed'));
       }
@@ -697,7 +697,7 @@ export default function AdminPanel({ onLogout }) {
           </div>
         </div>
 
-        <button onClick={() => { localStorage.removeItem('mk_token'); localStorage.removeItem('mk_admin_user'); onLogout(); }} style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 14px', borderRadius: 10, fontWeight: 800, fontSize: 11, cursor: 'pointer', letterSpacing: 0.5 }}>
+        <button onClick={() => { localStorage.removeItem('mk_token'); localStorage.removeItem('mk_admin_user'); localStorage.removeItem('mk_admin_logged'); onLogout(); }} style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 14px', borderRadius: 10, fontWeight: 800, fontSize: 11, cursor: 'pointer', letterSpacing: 0.5 }}>
           LOGOUT
         </button>
       </div>
