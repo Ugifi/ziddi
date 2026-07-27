@@ -28,7 +28,6 @@ router.post('/register', [
 
     const hashed = await bcrypt.hash(password, 10);
 
-    // Referral code se referrer dhundo
     let referrerId = null;
     if (referral_code && referral_code.trim()) {
       const [ref] = await db.query('SELECT id FROM users WHERE referral_code = ?', [referral_code.trim().toUpperCase()]);
@@ -49,19 +48,15 @@ router.post('/register', [
     ];
     const randomProfilePic = avatars[Math.floor(Math.random() * avatars.length)];
 
-    // User insert karo
     const [result] = await db.query(
       'INSERT INTO users (name, mobile, password, referred_by, profile_pic) VALUES (?, ?, ?, ?, ?)',
       [name, mobile, hashed, referrerId, randomProfilePic]
     );
 
     const newUserId = result.insertId;
-
-    // Referral code generate karke save karo
     const newReferralCode = generateReferralCode(newUserId);
     await db.query('UPDATE users SET referral_code = ? WHERE id = ?', [newReferralCode, newUserId]);
 
-    // Agar referrer hai toh referral_bonuses mein pending entry daalo
     if (referrerId) {
       await db.query(
         'INSERT INTO referral_bonuses (referrer_id, joiner_id, bonus_amount, status) VALUES (?, ?, 50, "pending")',
@@ -103,7 +98,6 @@ router.post('/login', [
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ success: false, message: 'Invalid mobile or password' });
 
-    // ── AUTO-FIX: Referral code NULL hai toh generate karo ──
     let referralCode = user.referral_code;
     if (!referralCode) {
       referralCode = generateReferralCode(user.id);
@@ -126,7 +120,7 @@ router.post('/login', [
         profile_pic: user.profile_pic,
         wallet_balance: user.wallet_balance,
         winning_balance: user.winning_balance,
-        referral_code: referralCode   // ← fixed: always populated
+        referral_code: referralCode
       }
     });
   } catch (err) {
@@ -135,7 +129,7 @@ router.post('/login', [
   }
 });
 
-// ─── 3. GET PROFILE ──────────────────────────────────────────────────────────
+// ─── 3. GET PROFILE ───────────────────────────────────────────────────────────
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -146,22 +140,20 @@ router.get('/profile', authMiddleware, async (req, res) => {
 
     let user = rows[0];
 
-    // ── AUTO-FIX: Referral code NULL hai toh generate karo ──
     if (!user.referral_code) {
       const newCode = generateReferralCode(user.id);
       await db.query('UPDATE users SET referral_code = ? WHERE id = ?', [newCode, user.id]);
       user.referral_code = newCode;
     }
 
-    const statsQuery = `
+    const [statsRows] = await db.query(`
       SELECT 
         COUNT(id) AS total_bids,
         SUM(CASE WHEN status = 'win' THEN 1 ELSE 0 END) AS games_won,
         MAX(CASE WHEN status = 'win' THEN win_amount ELSE 0 END) AS highest_win,
         AVG(amount) AS avg_bid
       FROM bids WHERE user_id = ?
-    `;
-    const [statsRows] = await db.query(statsQuery, [req.user.id]);
+    `, [req.user.id]);
     const stats = statsRows[0] || {};
 
     user.total_bids  = stats.total_bids || 0;
@@ -169,7 +161,6 @@ router.get('/profile', authMiddleware, async (req, res) => {
     user.highest_win = stats.highest_win || 0;
     user.avg_bid     = stats.avg_bid ? Math.round(Number(stats.avg_bid)) : 0;
 
-    // Referral stats
     const [refStats] = await db.query(
       'SELECT COUNT(*) as total_referrals, SUM(CASE WHEN status="credited" THEN bonus_amount ELSE 0 END) as total_earned FROM referral_bonuses WHERE referrer_id = ?',
       [req.user.id]
@@ -198,7 +189,6 @@ router.post('/update-profile', authMiddleware, async (req, res) => {
   }
 });
 
-// PUT method bhi support karo (OtherPages mein PUT use ho raha hai)
 router.put('/update-profile', authMiddleware, async (req, res) => {
   try {
     const { name } = req.body;
@@ -220,7 +210,6 @@ router.post('/update-password', authMiddleware, async (req, res) => {
     if (!newPassword || newPassword.length < 6)
       return res.status(400).json({ success: false, message: 'Min 6 characters required' });
 
-    // Old password verify karo agar diya hai
     if (oldPassword) {
       const [rows] = await db.query('SELECT password FROM users WHERE id = ?', [userId]);
       const match = await bcrypt.compare(oldPassword, rows[0].password);
@@ -241,7 +230,6 @@ router.get('/referral-stats', authMiddleware, async (req, res) => {
   try {
     const [user] = await db.query('SELECT id, referral_code FROM users WHERE id = ?', [req.user.id]);
 
-    // ── AUTO-FIX: Referral code NULL hai toh generate karo ──
     let referralCode = user[0]?.referral_code;
     if (!referralCode) {
       referralCode = generateReferralCode(req.user.id);
@@ -262,7 +250,7 @@ router.get('/referral-stats', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       data: {
-        referral_code:   referralCode,   // ← fixed: always populated
+        referral_code:   referralCode,
         total_referrals: rows.length,
         total_earned,
         pending_bonus,
@@ -275,7 +263,7 @@ router.get('/referral-stats', authMiddleware, async (req, res) => {
   }
 });
 
-// ─── 7. CHANGE PASSWORD (Admin ke liye) ──────────────────────
+// ─── 7. CHANGE PASSWORD ───────────────────────────────────────────────────────
 router.post('/change-password', authMiddleware, async (req, res) => {
   try {
     const { old_password, new_password } = req.body;
@@ -290,6 +278,52 @@ router.post('/change-password', authMiddleware, async (req, res) => {
     res.json({ success: true, message: 'Password changed successfully' });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ─── 8. FORGOT PASSWORD (Mobile + Name verify karke reset) ───────────────────
+// POST /api/auth/forgot-password
+// Body: { mobile, name, new_password }
+router.post('/forgot-password', [
+  body('mobile').notEmpty().withMessage('Mobile required'),
+  body('name').trim().notEmpty().withMessage('Name required'),
+  body('new_password').isLength({ min: 6 }).withMessage('Password min 6 characters')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
+
+  const { mobile, name, new_password } = req.body;
+
+  try {
+    // Mobile se user dhundo
+    const [rows] = await db.query('SELECT id, name, is_blocked FROM users WHERE mobile = ?', [mobile]);
+
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: 'Yeh mobile number registered nahi hai' });
+    }
+
+    const user = rows[0];
+
+    if (user.is_blocked) {
+      return res.status(403).json({ success: false, message: 'Account blocked hai. Support se contact karo.' });
+    }
+
+    // Name verify karo (case-insensitive)
+    const dbName    = user.name.trim().toLowerCase();
+    const inputName = name.trim().toLowerCase();
+
+    if (dbName !== inputName) {
+      return res.status(401).json({ success: false, message: 'Mobile aur naam match nahi karta' });
+    }
+
+    // Sab sahi hai — password reset karo
+    const hashed = await bcrypt.hash(new_password, 10);
+    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashed, user.id]);
+
+    res.json({ success: true, message: 'Password successfully reset kar diya gaya! Ab login karo.' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
