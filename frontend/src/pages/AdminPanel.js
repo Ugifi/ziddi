@@ -6,7 +6,6 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const API = 'https://ziddi-1-we11.onrender.com';
 
-// MySQL UTC store karta hai — IST = UTC + 5:30
 function toIST(dateStr) {
   if (!dateStr) return '';
   const utcStr = dateStr.toString().replace(' ', 'T') + 'Z';
@@ -121,6 +120,73 @@ const B = {
   },
 };
 
+// ── TIME PICKER WITH AM/PM ─────────────────────────────────────
+function TimePicker({ value, onChange, placeholder }) {
+  // value format: "HH:MM" 24hr internally, display with AM/PM
+  const parseTime = (val) => {
+    if (!val) return { hh: '', mm: '', ampm: 'AM' };
+    const [h, m] = val.split(':');
+    const hour = parseInt(h, 10);
+    if (isNaN(hour)) return { hh: '', mm: m || '', ampm: 'AM' };
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hh = hour === 0 ? '12' : hour > 12 ? String(hour - 12).padStart(2, '0') : String(hour).padStart(2, '0');
+    return { hh, mm: m || '00', ampm };
+  };
+
+  const { hh, mm, ampm } = parseTime(value);
+
+  const emit = (newHH, newMM, newAMPM) => {
+    let h = parseInt(newHH, 10);
+    if (isNaN(h)) { onChange(''); return; }
+    if (newAMPM === 'AM') { if (h === 12) h = 0; }
+    else { if (h !== 12) h += 12; }
+    onChange(`${String(h).padStart(2, '0')}:${newMM || '00'}`);
+  };
+
+  const selStyle = {
+    background: C.inputBg,
+    border: `2px solid ${C.inputBdr}`,
+    borderRadius: 10,
+    padding: '11px 8px',
+    color: C.textMain,
+    fontSize: 14,
+    fontWeight: 700,
+    outline: 'none',
+    cursor: 'pointer',
+    flex: 1,
+  };
+
+  const hours = ['12','01','02','03','04','05','06','07','08','09','10','11'];
+  const mins  = ['00','05','10','15','20','25','30','35','40','45','50','55'];
+
+  return (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+      <select value={hh} onChange={e => emit(e.target.value, mm, ampm)} style={selStyle}>
+        <option value="">HH</option>
+        {hours.map(h => <option key={h} value={h}>{h}</option>)}
+      </select>
+      <select value={mm} onChange={e => emit(hh, e.target.value, ampm)} style={selStyle}>
+        {mins.map(m => <option key={m} value={m}>{m}</option>)}
+      </select>
+      <select value={ampm} onChange={e => emit(hh, mm, e.target.value)} style={{ ...selStyle, flex: '0 0 70px', fontWeight: 900, color: ampm === 'AM' ? C.primary : C.danger }}>
+        <option value="AM">AM</option>
+        <option value="PM">PM</option>
+      </select>
+    </div>
+  );
+}
+
+// Display 24hr → 12hr AM/PM
+function displayTime(val) {
+  if (!val) return '--';
+  const [h, m] = val.split(':');
+  const hour = parseInt(h, 10);
+  if (isNaN(hour)) return val;
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hh = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${hh}:${m || '00'} ${ampm}`;
+}
+
 // ── STATUS BADGE ───────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
@@ -140,12 +206,50 @@ function StatusBadge({ status }) {
   );
 }
 
-// ── SMALL ACTION BUTTON ────────────────────────────────────────
 function ActionBtn({ onClick, color, bg, children }) {
   return (
     <button onClick={onClick} style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 12, background: bg, color }}>
       {children}
     </button>
+  );
+}
+
+// ── EDIT GAME MODAL ────────────────────────────────────────────
+function EditGameModal({ game, onClose, onSave }) {
+  const [form, setForm] = useState({
+    name: game.name || '',
+    open_time: game.open_time || '',
+    close_time: game.close_time || '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!form.name || !form.open_time || !form.close_time) { alert('Saari fields bhariye!'); return; }
+    setSaving(true);
+    const res = await apiCall(`/api/admin/games/${game.id}`, 'PUT', form);
+    setSaving(false);
+    if (res.success) { onSave({ ...game, ...form }); onClose(); }
+    else alert('Error: ' + (res.message || 'Update failed'));
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 17, fontWeight: 900, color: C.textMain }}>✏️ Edit Game</div>
+          <button onClick={onClose} style={{ background: C.dangerBg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.danger, fontSize: 16, fontWeight: 900 }}>✕</button>
+        </div>
+        <label style={B.label}>Game Name</label>
+        <input style={B.input} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Kalyan" />
+        <label style={B.label}>Open Time</label>
+        <TimePicker value={form.open_time} onChange={v => setForm(f => ({ ...f, open_time: v }))} />
+        <label style={B.label}>Close Time</label>
+        <TimePicker value={form.close_time} onChange={v => setForm(f => ({ ...f, close_time: v }))} />
+        <button onClick={save} disabled={saving} style={{ ...B.btn, marginTop: 8 }}>
+          {saving ? '⏳ SAVING...' : '💾 SAVE CHANGES'}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -270,6 +374,7 @@ export function AdminLogin({ onLogin }) {
       if (!data.success) { setErr(data.message || 'Login failed'); setLoading(false); return; }
       if (data.user.role !== 'admin') { setErr('Yeh account admin nahi hai'); setLoading(false); return; }
       localStorage.setItem('mk_token', data.token);
+      localStorage.setItem('mk_admin_user', JSON.stringify(data.user));
       onLogin(data.user);
     } catch { setErr('Server se connect nahi ho pa raha.'); }
     setLoading(false);
@@ -325,6 +430,28 @@ export default function AdminPanel({ onLogout }) {
   const [toast, setToast]             = useState('');
   const [loading, setLoading]         = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [editingGame, setEditingGame] = useState(null);
+
+  // ── FIX: Refresh pe logout nahi hoga ──────────────────────────
+  // Admin login state sessionStorage mein rakho
+  const [adminReady, setAdminReady] = useState(false);
+  useEffect(() => {
+    // Token hai toh admin already logged in hai, verify karo
+    const token = localStorage.getItem('mk_token');
+    if (token) {
+      apiCall('/api/auth/profile').then(res => {
+        if (res?.success && res?.user?.role === 'admin') {
+          setAdminReady(true);
+        } else {
+          localStorage.removeItem('mk_token');
+          localStorage.removeItem('mk_admin_user');
+          onLogout();
+        }
+      }).catch(() => setAdminReady(true)); // network error pe bhi andar rehne do
+    } else {
+      onLogout();
+    }
+  }, []);
 
   const [settings, setSettings] = useState({
     site_name: '', site_url: '', upi_id: '', upi_name: '', whatsapp: '', phone: '',
@@ -335,6 +462,33 @@ export default function AdminPanel({ onLogout }) {
   const [settingsSaved, setSettingsSaved]   = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const qrFileRef = useRef(null);
+
+  // ── CHANGE PASSWORD ────────────────────────────────────────────
+  const [pwForm, setPwForm] = useState({ oldPass: '', newPass: '', confirmPass: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const changeAdminPassword = async () => {
+    if (!pwForm.oldPass || !pwForm.newPass || !pwForm.confirmPass) {
+      showToast('❌ Saare fields bhariye!'); return;
+    }
+    if (pwForm.newPass.length < 6) { showToast('❌ New password min 6 characters ka ho!'); return; }
+    if (pwForm.newPass !== pwForm.confirmPass) { showToast('❌ New password aur confirm password match nahi kar rahe!'); return; }
+    setPwSaving(true);
+    try {
+      const res = await apiCall('/api/auth/change-password', 'POST', {
+        old_password: pwForm.oldPass,
+        new_password: pwForm.newPass,
+      });
+      if (res.success) {
+        showToast('✅ Password change ho gaya! Dobara login karo.');
+        setPwForm({ oldPass: '', newPass: '', confirmPass: '' });
+        setTimeout(() => { localStorage.removeItem('mk_token'); localStorage.removeItem('mk_admin_user'); onLogout(); }, 2000);
+      } else {
+        showToast('❌ ' + (res.message || 'Password change failed'));
+      }
+    } catch { showToast('❌ Server error!'); }
+    setPwSaving(false);
+  };
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3500); };
 
@@ -363,7 +517,7 @@ export default function AdminPanel({ onLogout }) {
           setSettings(prev => ({
             ...prev,
             site_name:        s.site_name        || prev.site_name,
-site_url:         s.site_url         || prev.site_url,
+            site_url:         s.site_url         || prev.site_url,
             upi_id:           s.upi_id           || prev.upi_id,
             upi_name:         s.upi_name         || prev.upi_name,
             whatsapp:         s.whatsapp         || s.whatsapp_support || prev.whatsapp,
@@ -386,6 +540,7 @@ site_url:         s.site_url         || prev.site_url,
   };
 
   useEffect(() => {
+    if (!adminReady) return;
     fetchPageData(page, true);
     const realtimePages = ['dashboard', 'bids', 'deposits', 'withdrawals', 'notices'];
     let interval = null;
@@ -393,7 +548,7 @@ site_url:         s.site_url         || prev.site_url,
       interval = setInterval(() => fetchPageData(page, false), 15000);
     }
     return () => { if (interval) clearInterval(interval); };
-  }, [page]);
+  }, [page, adminReady]);
 
   const navigateTo = (id) => { setPage(id); setDrawerOpen(false); };
 
@@ -496,6 +651,14 @@ site_url:         s.site_url         || prev.site_url,
     notices: '🔔 Notices & Alerts', settings: '⚙️ Settings',
   };
 
+  if (!adminReady) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.pageBg, color: C.primary, fontSize: 16, fontWeight: 700 }}>
+        ⏳ Verifying admin...
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: C.pageBg, fontFamily: '"Segoe UI", sans-serif' }}>
 
@@ -504,6 +667,18 @@ site_url:         s.site_url         || prev.site_url,
         <div style={{ position: 'fixed', top: 20, right: 20, background: C.textMain, color: '#fff', padding: '14px 24px', borderRadius: 12, borderLeft: `4px solid ${C.accent}`, boxShadow: '0 10px 30px rgba(13,27,94,0.25)', zIndex: 9999, fontWeight: 700, fontSize: 14, maxWidth: 320 }}>
           {toast}
         </div>
+      )}
+
+      {/* Edit Game Modal */}
+      {editingGame && (
+        <EditGameModal
+          game={editingGame}
+          onClose={() => setEditingGame(null)}
+          onSave={(updated) => {
+            setGames(gs => gs.map(g => g.id === updated.id ? updated : g));
+            showToast('Game updated ✅');
+          }}
+        />
       )}
 
       {/* NAVBAR */}
@@ -522,7 +697,7 @@ site_url:         s.site_url         || prev.site_url,
           </div>
         </div>
 
-        <button onClick={() => { localStorage.removeItem('mk_token'); onLogout(); }} style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 14px', borderRadius: 10, fontWeight: 800, fontSize: 11, cursor: 'pointer', letterSpacing: 0.5 }}>
+        <button onClick={() => { localStorage.removeItem('mk_token'); localStorage.removeItem('mk_admin_user'); onLogout(); }} style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 14px', borderRadius: 10, fontWeight: 800, fontSize: 11, cursor: 'pointer', letterSpacing: 0.5 }}>
           LOGOUT
         </button>
       </div>
@@ -562,7 +737,6 @@ site_url:         s.site_url         || prev.site_url,
       {/* MAIN CONTENT */}
       <div style={{ flex: 1, padding: '20px 16px', overflowY: 'auto' }}>
 
-        {/* Page Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ fontSize: 20, fontWeight: 900, color: C.textMain }}>{pageTitles[page]}</div>
           {['dashboard','bids','deposits','withdrawals','notices'].includes(page) && (
@@ -575,7 +749,7 @@ site_url:         s.site_url         || prev.site_url,
 
         <style>{`
           @keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)} }
-          input:focus { border-color: ${C.inputFocus} !important; box-shadow: 0 0 0 3px rgba(21,101,192,0.12) !important; }
+          input:focus,select:focus { border-color: ${C.inputFocus} !important; box-shadow: 0 0 0 3px rgba(21,101,192,0.12) !important; }
         `}</style>
 
         {loading && (
@@ -624,11 +798,12 @@ site_url:         s.site_url         || prev.site_url,
         {!loading && page === 'games' && <>
           <div style={B.card}>
             <div style={B.title}>➕ Add New Game</div>
+            <label style={B.label}>Game Name</label>
             <input style={B.input} placeholder="Game Name (e.g. Kalyan)" value={newGame.name} onChange={e => setNewGame({ ...newGame, name: e.target.value })} />
-            <div style={{ display: 'flex', gap: 10 }}>
-              <input style={{ ...B.input, flex: 1 }} placeholder="Open Time (e.g. 10:00)" value={newGame.open_time} onChange={e => setNewGame({ ...newGame, open_time: e.target.value })} />
-              <input style={{ ...B.input, flex: 1 }} placeholder="Close Time (e.g. 12:00)" value={newGame.close_time} onChange={e => setNewGame({ ...newGame, close_time: e.target.value })} />
-            </div>
+            <label style={B.label}>Open Time</label>
+            <TimePicker value={newGame.open_time} onChange={v => setNewGame({ ...newGame, open_time: v })} />
+            <label style={B.label}>Close Time</label>
+            <TimePicker value={newGame.close_time} onChange={v => setNewGame({ ...newGame, close_time: v })} />
             <button style={B.btn} onClick={addGame}>+ ADD GAME</button>
           </div>
 
@@ -637,36 +812,45 @@ site_url:         s.site_url         || prev.site_url,
             {games.length === 0
               ? <div style={{ color: C.textMuted, textAlign: 'center', padding: 20, fontWeight: 700 }}>No games found.</div>
               : games.map(g => (
-                <div key={g.id} style={{ background: C.inputBg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1.5px solid ${C.cardBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, opacity: g.is_hidden ? 0.6 : 1 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: 15, color: C.textMain }}>
-                      {g.name} {g.is_hidden && <span style={{ fontSize: 10, color: C.danger, background: C.dangerBg, padding: '2px 6px', borderRadius: 6 }}>HIDDEN</span>}
+                <div key={g.id} style={{ background: C.inputBg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1.5px solid ${C.cardBorder}`, opacity: g.is_hidden ? 0.6 : 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 15, color: C.textMain }}>
+                        {g.name} {g.is_hidden && <span style={{ fontSize: 10, color: C.danger, background: C.dangerBg, padding: '2px 6px', borderRadius: 6 }}>HIDDEN</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: C.textSub, marginTop: 4, fontWeight: 600 }}>
+                        🕐 {displayTime(g.open_time)} – {displayTime(g.close_time)}
+                      </div>
+                      <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4, fontWeight: 700 }}>
+                        Result: <strong style={{ color: C.primary, fontSize: 13 }}>{g.open_result || '***'}-{g.jodi_result || '**'}-{g.close_result || '***'}</strong>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: C.textSub, marginTop: 4, fontWeight: 600 }}>{g.open_time} – {g.close_time}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4, fontWeight: 700 }}>
-                      Result: <strong style={{ color: C.primary, fontSize: 13 }}>{g.open_result || '***'}-{g.jodi_result || '**'}-{g.close_result || '***'}</strong>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={async () => {
-                        const res = await apiCall(`/api/admin/games/${g.id}/hide`, 'PUT', { hide: !g.is_hidden });
-                        if (res.success) { showToast(g.is_hidden ? 'Game Show ✅' : 'Game Hide 🙈'); setGames(gs => gs.map(item => item.id === g.id ? { ...item, is_hidden: !g.is_hidden } : item)); }
-                      }} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: g.is_hidden ? C.successBg : C.warnBg, color: g.is_hidden ? C.success : C.warn, fontSize: 11, fontWeight: 800 }}>
-                        {g.is_hidden ? '👁️ Show' : '🙈 Hide'}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {/* EDIT BUTTON */}
+                        <button onClick={() => setEditingGame(g)}
+                          style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.badgePend, color: C.primary, fontSize: 11, fontWeight: 800 }}>
+                          ✏️ Edit
+                        </button>
+                        <button onClick={async () => {
+                          const res = await apiCall(`/api/admin/games/${g.id}/hide`, 'PUT', { hide: !g.is_hidden });
+                          if (res.success) { showToast(g.is_hidden ? 'Game Show ✅' : 'Game Hide 🙈'); setGames(gs => gs.map(item => item.id === g.id ? { ...item, is_hidden: !g.is_hidden } : item)); }
+                        }} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: g.is_hidden ? C.successBg : C.warnBg, color: g.is_hidden ? C.success : C.warn, fontSize: 11, fontWeight: 800 }}>
+                          {g.is_hidden ? '👁️ Show' : '🙈 Hide'}
+                        </button>
+                        <button onClick={async () => {
+                          if (!window.confirm(`"${g.name}" delete karna chahte hain?`)) return;
+                          const res = await apiCall(`/api/admin/games/${g.id}`, 'DELETE');
+                          if (res.success) { showToast('Game deleted 🗑️'); setGames(prev => prev.filter(item => item.id !== g.id)); }
+                        }} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.dangerBg, color: C.danger, fontSize: 11, fontWeight: 800 }}>
+                          🗑️ Del
+                        </button>
+                      </div>
+                      <StatusBadge status={g.status} />
+                      <button onClick={() => toggleGameStatus(g.id, g.status)} style={{ padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 11, background: g.status === 'open' ? C.successBg : C.badgePend, color: g.status === 'open' ? C.success : C.primary, textTransform: 'uppercase' }}>
+                        {g.status === 'open' ? '🟢 Close' : '🔵 Open'}
                       </button>
-                      <button onClick={async () => {
-                        if (!window.confirm(`"${g.name}" delete karna chahte hain?`)) return;
-                        const res = await apiCall(`/api/admin/games/${g.id}`, 'DELETE');
-                        if (res.success) { showToast('Game deleted 🗑️'); setGames(prev => prev.filter(item => item.id !== g.id)); }
-                      }} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.dangerBg, color: C.danger, fontSize: 11, fontWeight: 800 }}>
-                        🗑️ Del
-                      </button>
                     </div>
-                    <StatusBadge status={g.status} />
-                    <button onClick={() => toggleGameStatus(g.id, g.status)} style={{ padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 11, background: g.status === 'open' ? C.successBg : C.badgePend, color: g.status === 'open' ? C.success : C.primary, textTransform: 'uppercase' }}>
-                      {g.status === 'open' ? '🟢 Close' : '🔵 Open'}
-                    </button>
                   </div>
                 </div>
               ))}
@@ -726,7 +910,7 @@ site_url:         s.site_url         || prev.site_url,
               <div key={g.id} style={{ background: C.inputBg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1.5px solid ${C.cardBorder}` }}>
                 <div style={{ fontWeight: 800, fontSize: 15, color: C.textMain, marginBottom: 4 }}>{g.name}</div>
                 <div style={{ fontSize: 12, color: C.textSub, marginBottom: 12, fontWeight: 600 }}>
-                  {g.open_time} – {g.close_time} · Result: <strong style={{ color: C.primary, fontSize: 13 }}>{g.open_result || '***'}-{g.jodi_result || '**'}-{g.close_result || '***'}</strong>
+                  {displayTime(g.open_time)} – {displayTime(g.close_time)} · Result: <strong style={{ color: C.primary, fontSize: 13 }}>{g.open_result || '***'}-{g.jodi_result || '**'}-{g.close_result || '***'}</strong>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <input style={{ ...B.input, flex: 1, marginBottom: 0 }} placeholder="e.g. 128-456" value={resultForm[g.id] || ''} onChange={e => setResultForm(rf => ({ ...rf, [g.id]: e.target.value }))} />
@@ -859,6 +1043,24 @@ site_url:         s.site_url         || prev.site_url,
               <input style={B.input} type="email" placeholder="support@matkaking.com" value={settings.support_email} onChange={e => setSettings(s => ({ ...s, support_email: e.target.value }))} />
               <label style={B.label}>Support Hours</label>
               <input style={B.input} placeholder="Mon–Sat 10AM–8PM" value={settings.support_hours} onChange={e => setSettings(s => ({ ...s, support_hours: e.target.value }))} />
+            </div>
+
+            {/* ── CHANGE PASSWORD ── */}
+            <div style={B.card}>
+              <div style={B.title}>🔐 Change Admin Password</div>
+              <label style={B.label}>Current Password</label>
+              <input type="password" style={B.input} placeholder="Current password" value={pwForm.oldPass} onChange={e => setPwForm(f => ({ ...f, oldPass: e.target.value }))} />
+              <label style={B.label}>New Password</label>
+              <input type="password" style={B.input} placeholder="Min 6 characters" value={pwForm.newPass} onChange={e => setPwForm(f => ({ ...f, newPass: e.target.value }))} />
+              <label style={B.label}>Confirm New Password</label>
+              <input type="password" style={{ ...B.input, marginBottom: 0 }} placeholder="Dobara likhein" value={pwForm.confirmPass} onChange={e => setPwForm(f => ({ ...f, confirmPass: e.target.value }))} />
+              <button onClick={changeAdminPassword} disabled={pwSaving}
+                style={{ ...B.btn, marginTop: 14, background: pwSaving ? '#90CAF9' : 'linear-gradient(135deg, #6A1B9A, #8E24AA)', opacity: pwSaving ? 0.8 : 1 }}>
+                {pwSaving ? '⏳ CHANGING...' : '🔐 CHANGE PASSWORD'}
+              </button>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, textAlign: 'center', fontWeight: 600 }}>
+                Password change hone ke baad auto logout ho jayega
+              </div>
             </div>
 
             <div style={B.card}>
