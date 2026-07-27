@@ -5,8 +5,6 @@ const cheerio = require('cheerio');
 const db      = require('../config/db');
 
 // ─── Result string parser ─────────────────────────────────────────────────────
-// "247-30-226" → open=247, jodi=30, close=226
-// "257-4"      → open=257, jodi=4,  close=null
 function parseResult(str) {
   const clean = (str || '').replace(/\s/g, '');
   const parts = clean.split('-');
@@ -30,39 +28,67 @@ async function scrapeDpboss() {
   const $       = cheerio.load(html);
   const results = [];
 
-  // Try multiple selectors — site structure ke hisaab se
-  $('table tr').each((i, row) => {
-    const cells = $(row).find('td');
-    if (cells.length >= 2) {
-      const gameName = $(cells[0]).text().trim().toLowerCase().replace(/\[.*?\]/g, '').trim();
-      const result   = $(cells[1]).text().trim();
-      if (gameName && result && result !== '-' && result !== '**') {
-        results.push({ gameName, result });
+  // dpboss site mein game name bold/heading hota hai, result uske neeche
+  // Har game block ko dhundo — game name text hai jo TIME nahi hai
+  const timeRegex  = /^\d{1,2}:\d{2}/;         // "10:30 am" jaisa
+  const resultRegex = /\d{3}-\d{1,2}/;          // "247-30" ya "247-30-226" jaisa
+  const hindiRegex  = /[\u0900-\u097F]/;         // Hindi characters
+
+  $('table').each((ti, table) => {
+    $(table).find('tr').each((ri, row) => {
+      const cells = $(row).find('td');
+      if (cells.length < 2) return;
+
+      // Pehla cell: game name
+      // Doosra/teesra cell: result
+      let gameName = '';
+      let result   = '';
+
+      // Try: center cell mein game name hota hai dpboss layout mein
+      if (cells.length >= 3) {
+        gameName = $(cells[1]).text().trim();
+        result   = $(cells[1]).find('font, b, strong').first().text().trim() ||
+                   $(cells[2]).text().trim();
+      } else {
+        gameName = $(cells[0]).text().trim();
+        result   = $(cells[1]).text().trim();
       }
-    }
+
+      // Skip: time format, Hindi text, empty, numbers only
+      if (!gameName) return;
+      if (timeRegex.test(gameName)) return;
+      if (hindiRegex.test(gameName)) return;
+      if (/^\d+$/.test(gameName)) return;
+      if (gameName.length < 3) return;
+
+      // Result valid hai?
+      if (!resultRegex.test(result)) return;
+
+      results.push({
+        gameName: gameName.toLowerCase().replace(/\[.*?\]/g, '').trim(),
+        result:   result.trim()
+      });
+    });
   });
 
-  // Fallback: div/span based layout
-  if (!results.length) {
-    $('.game-name, .market-name').each((i, el) => {
-      const gameName = $(el).text().trim().toLowerCase();
-      const result   = $(el).next().text().trim();
-      if (gameName && result) results.push({ gameName, result });
-    });
-  }
-
-  return results;
+  // Deduplicate
+  const seen = new Set();
+  return results.filter(r => {
+    const key = r.gameName;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // ─── Fuzzy name match ─────────────────────────────────────────────────────────
 function isMatch(dbName, scrapedName) {
   const a = dbName.toLowerCase().trim().replace(/\s+/g, ' ');
-  const b = scrapedName.toLowerCase().trim().replace(/\s+/g, ' ').replace(/\[.*?\]/g, '').trim();
+  const b = scrapedName.toLowerCase().trim().replace(/\s+/g, ' ');
   return a === b || a.includes(b) || b.includes(a);
 }
 
 // ─── GET /api/scraper/preview ─────────────────────────────────────────────────
-// Sirf dekho kya scrape ho raha hai — DB touch nahi hoga
 router.get('/preview', async (req, res) => {
   try {
     const scraped = await scrapeDpboss();
@@ -74,7 +100,6 @@ router.get('/preview', async (req, res) => {
 });
 
 // ─── GET /api/scraper/sync ────────────────────────────────────────────────────
-// Scrape karo + apne DB games update karo
 router.get('/sync', async (req, res) => {
   try {
     const scraped = await scrapeDpboss();
@@ -82,11 +107,10 @@ router.get('/sync', async (req, res) => {
     if (!scraped.length) {
       return res.json({
         success: false,
-        message: 'Kuch scrape nahi hua — /api/scraper/preview se site structure check karo'
+        message: 'Kuch scrape nahi hua — /api/scraper/preview se check karo'
       });
     }
 
-    // DB ke saare active games lo
     const [dbGames] = await db.query(
       "SELECT id, name FROM games WHERE status != 'deleted'"
     );
@@ -112,23 +136,18 @@ router.get('/sync', async (req, res) => {
           [parsed.open_result, parsed.jodi_result, parsed.close_result, dbGame.id]
         );
         updated++;
-        matched.push({
-          db_game:  dbGame.name,
-          scraped:  item.gameName,
-          result:   item.result,
-          parsed
-        });
+        matched.push({ db_game: dbGame.name, scraped: item.gameName, result: item.result });
       } else {
         unmatched.push(item);
       }
     }
 
     res.json({
-      success:        true,
-      message:        `✅ ${updated} games updated`,
-      total_scraped:  scraped.length,
+      success: true,
+      message: `✅ ${updated} games updated`,
+      total_scraped: scraped.length,
       matched,
-      unmatched // yeh dekh ke DB game names adjust karo
+      unmatched
     });
 
   } catch (err) {
