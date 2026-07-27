@@ -7,7 +7,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   const [currentSlide, setCurrentSlide] = useState(0);
   const [disawarGames, setDisawarGames] = useState([]);
   const [showDisawar, setShowDisawar] = useState(false);
-  const [showDeposit, setShowDeposit] = useState(false); // ← NEW
+  const [showDeposit, setShowDeposit] = useState(false);
 
   const [settings, setSettings] = useState({
     site_name: 'MATKA KING',
@@ -97,23 +97,47 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     fetchGames();
   }, []);
 
+  // ✅ FIXED: Open digit aur close digit auto-calculate karta hai
   const formatResult = (g) => {
-  const open  = g.open_result  || '***';
-  const jodi  = g.jodi_result  || '**';
-  const close = g.close_result || '***';
-  return `${open}-${jodi}-${close}`;
-};
-const isRunning = (g) => g.status === 'open';
+    const open  = g.open_result  || '***';
+    const close = g.close_result || '***';
 
-const formatTime = (timeStr) => {
-  if (!timeStr) return '--:--';
-  try {
-    const [h, m] = timeStr.split(':').map(Number);
-    const period = h >= 12 ? 'PM' : 'AM';
-    const hour12 = h % 12 || 12;
-    return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
-  } catch { return timeStr; }
-};
+    let jodi = '**';
+    if (g.open_result) {
+      // Open digit = sum of open_result digits % 10  (e.g. 4+5+0 = 9)
+      const openDigit = String(g.open_result)
+        .split('')
+        .reduce((sum, d) => sum + parseInt(d, 10), 0) % 10;
+
+      if (g.close_result) {
+        // Close digit = sum of close_result digits % 10  (e.g. 4+5+6 = 15 → 5)
+        const closeDigit = String(g.close_result)
+          .split('')
+          .reduce((sum, d) => sum + parseInt(d, 10), 0) % 10;
+        jodi = `${openDigit}${closeDigit}`;           // e.g. "95"
+      } else {
+        jodi = `${openDigit}*`;                        // e.g. "9*"
+      }
+    }
+
+    return `${open}-${jodi}-${close}`;
+    // Open only  → "450-9*-***"  ✅
+    // Both       → "450-95-679"  ✅
+    // None       → "***-**-***"  ✅
+  };
+
+  const isRunning = (g) => g.status === 'open';
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '--:--';
+    try {
+      const [h, m] = timeStr.split(':').map(Number);
+      const period = h >= 12 ? 'PM' : 'AM';
+      const hour12 = h % 12 || 12;
+      return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+    } catch { return timeStr; }
+  };
+
   const tickerContent = settings.ticker_text
     ? settings.ticker_text
     : `📞 Contact: ${settings.phone} &nbsp;&nbsp;&nbsp; 💳 Instant Withdrawal | 100% Safe &nbsp;&nbsp;&nbsp; 📞 Contact: ${settings.phone} &nbsp;&nbsp;&nbsp; 💳 Instant Withdrawal | 100% Safe`;
@@ -194,9 +218,11 @@ const formatTime = (timeStr) => {
                 <div className="hs-result">
                   <span className="hs-result-text">{formatResult(g)}</span>
                 </div>
-                {open
-                  ? <div className="hs-status-running">Betting is Running for today</div>
-                  : <div className="hs-status-closed">Closed for today</div>
+                {g.open_result && !g.close_result
+                  ? <div className="hs-status-running">Running for close</div>
+                  : open
+                    ? <div className="hs-status-running">Market is open</div>
+                    : <div className="hs-status-closed">Closed for today</div>
                 }
                 <div className="hs-card-divider" />
                 <div className="hs-bottom-row">
@@ -204,11 +230,11 @@ const formatTime = (timeStr) => {
                     <div className="hs-time-block">
                       <div className="hs-time-lbl">Time Open :</div>
                       <div className="hs-time-val">{formatTime(g.open_time)}</div>
-                  </div>
-                  <div className="hs-time-sep" />
-                  <div className="hs-time-block">
-                    <div className="hs-time-lbl">Time Close :</div>
-                    <div className="hs-time-val">{formatTime(g.close_time)}</div>
+                    </div>
+                    <div className="hs-time-sep" />
+                    <div className="hs-time-block">
+                      <div className="hs-time-lbl">Time Close :</div>
+                      <div className="hs-time-val">{formatTime(g.close_time)}</div>
                     </div>
                   </div>
                   <button className="hs-play-circle" onClick={() => open && onPlay(g)} disabled={!open}>
@@ -322,7 +348,7 @@ const formatTime = (timeStr) => {
         </div>
       </div>
 
-      {/* ADD MONEY / WITHDRAW — onAdd ab modal kholta hai */}
+      {/* ADD MONEY / WITHDRAW */}
       <div className="hs-action-row">
         <button className="hs-btn" onClick={() => setShowDeposit(true)}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -385,9 +411,11 @@ const formatTime = (timeStr) => {
               <div className="hs-result">
                 <span className="hs-result-text">{formatResult(g)}</span>
               </div>
-              {open
-                ? <div className="hs-status-running">Betting is Running for today</div>
-                : <div className="hs-status-closed">Closed for today</div>
+              {g.open_result && !g.close_result
+                ? <div className="hs-status-running">Running for close</div>
+                : open
+                  ? <div className="hs-status-running">Market is open</div>
+                  : <div className="hs-status-closed">Closed for today</div>
               }
               <div className="hs-card-divider" />
               <div className="hs-bottom-row">
