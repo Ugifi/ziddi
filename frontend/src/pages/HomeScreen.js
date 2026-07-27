@@ -33,7 +33,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     const fetchSettings = async () => {
       try {
         const token = localStorage.getItem('mk_token');
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const API_URL = 'https://ziddi-1-we11.onrender.com';
         const res = await fetch(`${API_URL}/api/admin/settings`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -59,7 +59,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     const fetchGames = async () => {
       try {
         const token = localStorage.getItem('mk_token');
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const API_URL = 'https://ziddi-1-we11.onrender.com';
         const res = await fetch(`${API_URL}/api/games`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
