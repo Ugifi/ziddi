@@ -275,4 +275,23 @@ router.get('/referral-stats', authMiddleware, async (req, res) => {
   }
 });
 
+// ─── 7. CHANGE PASSWORD (Admin ke liye) ──────────────────────
+router.post('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { old_password, new_password } = req.body;
+    const userId = req.user.id;
+    if (!new_password || new_password.length < 6)
+      return res.status(400).json({ success: false, message: 'Min 6 characters required' });
+    const [rows] = await db.query('SELECT password FROM users WHERE id = ?', [userId]);
+    const match = await bcrypt.compare(old_password, rows[0].password);
+    if (!match) return res.status(401).json({ success: false, message: 'Current password galat hai' });
+    const hashed = await bcrypt.hash(new_password, 10);
+    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
+    res.json({ success: true, message: 'Password changed successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;
