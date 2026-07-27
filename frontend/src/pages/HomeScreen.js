@@ -97,7 +97,12 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     fetchGames();
   }, []);
 
-  const formatResult = (res) => res ? res : '***-**-***';
+  const formatResult = (g) => {
+  const open  = g.open_result  || '***';
+  const jodi  = g.jodi_result  || '**';
+  const close = g.close_result || '***';
+  return `${open}-${jodi}-${close}`;
+};
 const isRunning = (g) => g.status === 'open';
 
 const formatTime = (timeStr) => {
@@ -187,7 +192,7 @@ const formatTime = (timeStr) => {
                   </div>
                 </div>
                 <div className="hs-result">
-                  <span className="hs-result-text">{formatResult(g.result)}</span>
+                  <span className="hs-result-text">{formatResult(g)}</span>
                 </div>
                 {open
                   ? <div className="hs-status-running">Betting is Running for today</div>
@@ -378,7 +383,7 @@ const formatTime = (timeStr) => {
                 </div>
               </div>
               <div className="hs-result">
-                <span className="hs-result-text">{formatResult(g.result)}</span>
+                <span className="hs-result-text">{formatResult(g)}</span>
               </div>
               {open
                 ? <div className="hs-status-running">Betting is Running for today</div>
