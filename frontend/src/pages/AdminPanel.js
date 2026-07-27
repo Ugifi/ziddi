@@ -34,31 +34,31 @@ function apiCall(path, method = 'GET', body = null) {
 
 // ── BLUE THEME TOKENS ──────────────────────────────────────────
 const C = {
-  navBg:      'linear-gradient(135deg, #0d1b5e 0%, #1a2f8f 60%, #1565C0 100%)',
-  drawerBg:   '#0a1550',
+  navBg: 'linear-gradient(135deg, #0d1b5e 0%, #1a2f8f 60%, #1565C0 100%)',
+  drawerBg: '#0a1550',
   drawerItem: '#0f1d6b',
-  drawerAct:  '#1976D2',
-  primary:    '#1565C0',
+  drawerAct: '#1976D2',
+  primary: '#1565C0',
   primaryHov: '#1976D2',
-  accent:     '#FFD700',
+  accent: '#FFD700',
   accentSoft: '#FFF8DC',
-  pageBg:     '#EEF2FF',
-  card:       '#FFFFFF',
+  pageBg: '#EEF2FF',
+  card: '#FFFFFF',
   cardBorder: '#C5CAE9',
   cardShadow: '0 4px 16px rgba(21,101,192,0.10)',
-  textMain:   '#0d1b5e',
-  textSub:    '#1565C0',
-  textMuted:  '#5C6BC0',
-  success:    '#2E7D32',
-  successBg:  '#E8F5E9',
-  danger:     '#C62828',
-  dangerBg:   '#FFEBEE',
-  warn:       '#E65100',
-  warnBg:     '#FFF3E0',
-  inputBg:    '#F0F4FF',
-  inputBdr:   '#90CAF9',
+  textMain: '#0d1b5e',
+  textSub: '#1565C0',
+  textMuted: '#5C6BC0',
+  success: '#2E7D32',
+  successBg: '#E8F5E9',
+  danger: '#C62828',
+  dangerBg: '#FFEBEE',
+  warn: '#E65100',
+  warnBg: '#FFF3E0',
+  inputBg: '#F0F4FF',
+  inputBdr: '#90CAF9',
   inputFocus: '#1565C0',
-  badgePend:  '#E3F2FD',
+  badgePend: '#E3F2FD',
   badgePendT: '#1565C0',
 };
 
@@ -156,8 +156,8 @@ function TimePicker({ value, onChange, placeholder }) {
     flex: 1,
   };
 
-  const hours = ['12','01','02','03','04','05','06','07','08','09','10','11'];
-  const mins  = ['00','05','10','15','20','25','30','35','40','45','50','55'];
+  const hours = ['12', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
+  const mins = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 
   return (
     <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
@@ -192,11 +192,11 @@ function StatusBadge({ status }) {
   const map = {
     approved: { bg: C.successBg, color: C.success, label: 'Approved' },
     rejected: { bg: C.dangerBg, color: C.danger, label: 'Rejected' },
-    pending:  { bg: C.badgePend, color: C.badgePendT, label: 'Pending' },
-    won:      { bg: C.successBg, color: C.success, label: 'Won' },
-    lost:     { bg: C.dangerBg, color: C.danger, label: 'Lost' },
-    open:     { bg: C.successBg, color: C.success, label: 'Open' },
-    closed:   { bg: C.dangerBg, color: C.danger, label: 'Closed' },
+    pending: { bg: C.badgePend, color: C.badgePendT, label: 'Pending' },
+    won: { bg: C.successBg, color: C.success, label: 'Won' },
+    lost: { bg: C.dangerBg, color: C.danger, label: 'Lost' },
+    open: { bg: C.successBg, color: C.success, label: 'Open' },
+    closed: { bg: C.dangerBg, color: C.danger, label: 'Closed' },
   };
   const s = map[status] || { bg: '#F5F5F5', color: '#757575', label: status };
   return (
@@ -360,10 +360,10 @@ function WithdrawCard({ w, onApprove, onReject }) {
 
 // ─── ADMIN LOGIN ──────────────────────────────────────────────
 export function AdminLogin({ onLogin }) {
-  const [mobile, setMobile]     = useState('');
+  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
-  const [err, setErr]           = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const go = async () => {
     setErr('');
@@ -415,20 +415,20 @@ export function AdminLogin({ onLogin }) {
 //  ADMIN PANEL MAIN
 // ═══════════════════════════════════════════════════════════════
 export default function AdminPanel({ onLogout }) {
-  const [page, setPage]               = useState('dashboard');
-  const [drawerOpen, setDrawerOpen]   = useState(false);
-  const [stats, setStats]             = useState(null);
-  const [users, setUsers]             = useState([]);
-  const [games, setGames]             = useState([]);
-  const [deposits, setDeposits]       = useState([]);
+  const [page, setPage] = useState('dashboard');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [games, setGames] = useState([]);
+  const [deposits, setDeposits] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
-  const [bids, setBids]               = useState([]);
-  const [notices, setNotices]         = useState([]);
-  const [noticeMsg, setNoticeMsg]     = useState('');
-  const [newGame, setNewGame]         = useState({ name: '', open_time: '', close_time: '' });
-  const [resultForm, setResultForm]   = useState({});
-  const [toast, setToast]             = useState('');
-  const [loading, setLoading]         = useState(false);
+  const [bids, setBids] = useState([]);
+  const [notices, setNotices] = useState([]);
+  const [noticeMsg, setNoticeMsg] = useState('');
+  const [newGame, setNewGame] = useState({ name: '', open_time: '', close_time: '' });
+  const [resultForm, setResultForm] = useState({});
+  const [toast, setToast] = useState('');
+  const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [editingGame, setEditingGame] = useState(null);
 
@@ -459,7 +459,7 @@ export default function AdminPanel({ onLogout }) {
     min_deposit: '', max_deposit: '', min_withdrawal: '', max_withdrawal: '',
     maintenance_mode: '0', qr_image: '',
   });
-  const [settingsSaved, setSettingsSaved]   = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const qrFileRef = useRef(null);
 
@@ -475,9 +475,9 @@ export default function AdminPanel({ onLogout }) {
     if (pwForm.newPass !== pwForm.confirmPass) { showToast('❌ New password aur confirm password match nahi kar rahe!'); return; }
     setPwSaving(true);
     try {
-      const res = await apiCall('/api/auth/change-password', 'POST', {
-        old_password: pwForm.oldPass,
-        new_password: pwForm.newPass,
+      const res = await apiCall('/api/auth/update-password', 'POST', {
+        oldPassword: pwForm.oldPass,
+        newPassword: pwForm.newPass,
       });
       if (res.success) {
         showToast('✅ Password change ho gaya! Dobara login karo.');
@@ -516,22 +516,22 @@ export default function AdminPanel({ onLogout }) {
           const s = d.settings;
           setSettings(prev => ({
             ...prev,
-            site_name:        s.site_name        || prev.site_name,
-            site_url:         s.site_url         || prev.site_url,
-            upi_id:           s.upi_id           || prev.upi_id,
-            upi_name:         s.upi_name         || prev.upi_name,
-            whatsapp:         s.whatsapp         || s.whatsapp_support || prev.whatsapp,
-            phone:            s.phone            || s.support_phone    || prev.phone,
-            telegram:         s.telegram         || s.telegram_user    || prev.telegram,
+            site_name: s.site_name || prev.site_name,
+            site_url: s.site_url || prev.site_url,
+            upi_id: s.upi_id || prev.upi_id,
+            upi_name: s.upi_name || prev.upi_name,
+            whatsapp: s.whatsapp || s.whatsapp_support || prev.whatsapp,
+            phone: s.phone || s.support_phone || prev.phone,
+            telegram: s.telegram || s.telegram_user || prev.telegram,
             telegram_channel: s.telegram_channel || prev.telegram_channel,
-            support_hours:    s.support_hours    || prev.support_hours,
-            support_email:    s.support_email    || prev.support_email,
-            min_deposit:      s.min_deposit      || prev.min_deposit,
-            max_deposit:      s.max_deposit      || prev.max_deposit,
-            min_withdrawal:   s.min_withdrawal   || prev.min_withdrawal,
-            max_withdrawal:   s.max_withdrawal   || prev.max_withdrawal,
+            support_hours: s.support_hours || prev.support_hours,
+            support_email: s.support_email || prev.support_email,
+            min_deposit: s.min_deposit || prev.min_deposit,
+            max_deposit: s.max_deposit || prev.max_deposit,
+            min_withdrawal: s.min_withdrawal || prev.min_withdrawal,
+            max_withdrawal: s.max_withdrawal || prev.max_withdrawal,
             maintenance_mode: s.maintenance_mode || '0',
-            qr_image:         s.qr_image         || '',
+            qr_image: s.qr_image || '',
           }));
         }
         done();
@@ -589,7 +589,7 @@ export default function AdminPanel({ onLogout }) {
   };
 
   // ── DEPOSITS / WITHDRAWALS ──
-  const updateDeposit    = async (id, action) => {
+  const updateDeposit = async (id, action) => {
     const res = await apiCall(`/api/admin/deposits/${id}`, 'PUT', { action });
     if (res.success) { setDeposits(ds => ds.map(d => d.id === id ? { ...d, status: action === 'approve' ? 'approved' : 'rejected' } : d)); showToast(`Deposit ${action}d ✅`); }
   };
@@ -633,15 +633,15 @@ export default function AdminPanel({ onLogout }) {
     : null;
 
   const SIDEBAR = [
-    { id: 'dashboard',   ic: '📊', l: 'Dashboard' },
-    { id: 'users',       ic: '👥', l: 'Users' },
-    { id: 'games',       ic: '🎮', l: 'Games' },
-    { id: 'deposits',    ic: '💰', l: 'Deposits' },
+    { id: 'dashboard', ic: '📊', l: 'Dashboard' },
+    { id: 'users', ic: '👥', l: 'Users' },
+    { id: 'games', ic: '🎮', l: 'Games' },
+    { id: 'deposits', ic: '💰', l: 'Deposits' },
     { id: 'withdrawals', ic: '💸', l: 'Withdrawals' },
-    { id: 'bids',        ic: '🎯', l: 'All Bids' },
-    { id: 'results',     ic: '🏆', l: 'Declare Result' },
-    { id: 'notices',     ic: '🔔', l: 'Notices' },
-    { id: 'settings',    ic: '⚙️', l: 'Settings' },
+    { id: 'bids', ic: '🎯', l: 'All Bids' },
+    { id: 'results', ic: '🏆', l: 'Declare Result' },
+    { id: 'notices', ic: '🔔', l: 'Notices' },
+    { id: 'settings', ic: '⚙️', l: 'Settings' },
   ];
 
   const pageTitles = {
@@ -684,7 +684,7 @@ export default function AdminPanel({ onLogout }) {
       {/* NAVBAR */}
       <div style={{ background: C.navBg, height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', position: 'sticky', top: 0, zIndex: 200, boxShadow: '0 3px 20px rgba(13,27,94,0.35)', flexShrink: 0 }}>
         <button onClick={() => setDrawerOpen(true)} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, width: 42, height: 42, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, padding: 0 }}>
-          {[0,1,2].map(i => <span key={i} style={{ display: 'block', width: 20, height: 2.5, background: '#fff', borderRadius: 2 }} />)}
+          {[0, 1, 2].map(i => <span key={i} style={{ display: 'block', width: 20, height: 2.5, background: '#fff', borderRadius: 2 }} />)}
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -739,7 +739,7 @@ export default function AdminPanel({ onLogout }) {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ fontSize: 20, fontWeight: 900, color: C.textMain }}>{pageTitles[page]}</div>
-          {['dashboard','bids','deposits','withdrawals','notices'].includes(page) && (
+          {['dashboard', 'bids', 'deposits', 'withdrawals', 'notices'].includes(page) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#E3F2FD', border: `1.5px solid #90CAF9`, borderRadius: 20, padding: '6px 12px', fontSize: 11, color: C.primary, fontWeight: 800 }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#1976D2', display: 'inline-block', animation: 'livePulse 2s infinite' }} />
               LIVE {lastRefresh && <span style={{ color: '#64B5F6', marginLeft: 4 }}>· {lastRefresh.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
@@ -763,16 +763,16 @@ export default function AdminPanel({ onLogout }) {
         {!loading && page === 'dashboard' && stats && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 24 }}>
             {[
-              { val: stats.total_users || 0,                                          label: 'Total Users',       color: C.primary,   icon: '👥' },
-              { val: stats.active_games || 0,                                         label: 'Active Games',      color: '#7B1FA2',   icon: '🎮' },
-              { val: stats.today_bids?.count || 0,                                    label: 'Aaj ke Bids',       color: C.warn,      icon: '🎯' },
-              { val: '₹' + (stats.today_bids?.volume || 0).toLocaleString(),          label: 'Bid Volume',        color: C.warn,      icon: '📈' },
-              { val: stats.pending_deposits?.count || 0,                              label: 'Pending Deposits',  color: C.danger,    icon: '⏳' },
-              { val: '₹' + (stats.pending_deposits?.volume || 0).toLocaleString(),    label: 'Pending Dep. Amt',  color: C.danger,    icon: '💳' },
-              { val: stats.pending_withdrawals?.count || 0,                           label: 'Pending Withdraw',  color: '#D84315',   icon: '🔄' },
-              { val: '₹' + (stats.pending_withdrawals?.volume || 0).toLocaleString(), label: 'Pending With. Amt', color: '#D84315',   icon: '💵' },
-              { val: '₹' + (stats.total_deposited || 0).toLocaleString(),             label: 'Total Deposited',   color: '#0277BD',   icon: '🏦' },
-              { val: '₹' + (stats.total_winnings_paid || 0).toLocaleString(),         label: 'Winnings Paid',     color: C.success,   icon: '🏆' },
+              { val: stats.total_users || 0, label: 'Total Users', color: C.primary, icon: '👥' },
+              { val: stats.active_games || 0, label: 'Active Games', color: '#7B1FA2', icon: '🎮' },
+              { val: stats.today_bids?.count || 0, label: 'Aaj ke Bids', color: C.warn, icon: '🎯' },
+              { val: '₹' + (stats.today_bids?.volume || 0).toLocaleString(), label: 'Bid Volume', color: C.warn, icon: '📈' },
+              { val: stats.pending_deposits?.count || 0, label: 'Pending Deposits', color: C.danger, icon: '⏳' },
+              { val: '₹' + (stats.pending_deposits?.volume || 0).toLocaleString(), label: 'Pending Dep. Amt', color: C.danger, icon: '💳' },
+              { val: stats.pending_withdrawals?.count || 0, label: 'Pending Withdraw', color: '#D84315', icon: '🔄' },
+              { val: '₹' + (stats.pending_withdrawals?.volume || 0).toLocaleString(), label: 'Pending With. Amt', color: '#D84315', icon: '💵' },
+              { val: '₹' + (stats.total_deposited || 0).toLocaleString(), label: 'Total Deposited', color: '#0277BD', icon: '🏦' },
+              { val: '₹' + (stats.total_winnings_paid || 0).toLocaleString(), label: 'Winnings Paid', color: C.success, icon: '🏆' },
             ].map((s, i) => (
               <div key={i} style={{ background: C.card, borderRadius: 16, padding: 16, boxShadow: C.cardShadow, border: `1.5px solid ${C.cardBorder}`, borderLeft: `5px solid ${s.color}`, display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 46, height: 46, borderRadius: 12, background: s.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{s.icon}</div>
@@ -989,8 +989,8 @@ export default function AdminPanel({ onLogout }) {
                     {settings.qr_image
                       ? <img src={settings.qr_image} alt="Custom QR" style={{ width: 160, height: 160, borderRadius: 12, border: `3px solid ${C.success}`, display: 'block', margin: '0 auto', objectFit: 'contain', background: '#fff' }} />
                       : <div style={{ width: 160, height: 160, borderRadius: 12, border: `2px dashed #A5D6A7`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A5D6A7', fontSize: 12, fontWeight: 700, margin: '0 auto', flexDirection: 'column', gap: 8 }}>
-                          <span style={{ fontSize: 32 }}>📷</span>Upload QR
-                        </div>
+                        <span style={{ fontSize: 32 }}>📷</span>Upload QR
+                      </div>
                     }
                     <input ref={qrFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleQrUpload} />
                     <button onClick={() => qrFileRef.current?.click()} style={{ marginTop: 10, padding: '8px 20px', borderRadius: 10, border: `1.5px solid ${C.success}`, background: C.successBg, color: C.success, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
