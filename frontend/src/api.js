@@ -1,5 +1,4 @@
-const API_URL = (process.env.REACT_APP_API_URL || 'http://localhost:5000') + '/api';
-
+const API_URL = 'https://ziddi-1-we11.onrender.com/api';
 const getHeaders = () => ({
   'Content-Type': 'application/json',
   ...(localStorage.getItem('mk_token') ? { Authorization: `Bearer ${localStorage.getItem('mk_token')}` } : {})
