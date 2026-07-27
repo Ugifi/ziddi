@@ -6,29 +6,17 @@ const db      = require('../config/db');
 
 const BASE = 'https://dpbossss.boston/panel-chart-record';
 
+// DB game name (lowercase) → dpboss slug
 const GAME_SLUGS = {
-  'kalyan':             'kalyan',
-  'kalyan morning':     'kalyan-morning',
-  'kalyan night':       'kalyan-night',
-  'milan morning':      'milan-morning',
-  'milan day':          'milan-day',
-  'milan night':        'milan-night',
-  'rajdhani day':       'rajdhani-day',
-  'rajdhani morning':   'rajdhani-morning',
-  'rajdhani night':     'rajdhani-night',
-  'main bazar':         'main-bazar',
-  'main bazar morning': 'main-bazar-morning',
-  'sridevi':            'sridevi',
-  'sridevi morning':    'sridevi-morning',
-  'sridevi night':      'sridevi-night',
-  'time bazar':         'time-bazar',
-  'madhuri':            'madhuri',
-  'madhur day':         'madhur-day',
-  'madhur night':       'madhur-night',
-  'supreme day':        'supreme-day',
-  'supreme night':      'supreme-night',
-  'maharani':           'maharani',
-  'karnataka day':      'karnataka-day',
+  'karnataka day':  'karnataka-day',
+  'milan morning':  'milan-morning',
+  'sridevi':        'sridevi',
+  'time bazar':     'time-bazar',
+  'madhur day':     'madhur-day',
+  'rajdhani day':   'rajdhani-day',
+  'milan day':      'milan-day',
+  'supreme day':    'supreme-day',
+  'kalyan':         'kalyan',
 };
 
 // ─── Result parser ────────────────────────────────────────────────────────────
@@ -52,7 +40,6 @@ async function scrapeGame(slug) {
     const $ = cheerio.load(html);
     let result = '';
 
-    // Result format: "247-30-226" ya "260-8"
     $('font, b, strong, h2, h3, p, div, td').each((i, el) => {
       const text = $(el).text().trim();
       if (/^\d{3}-\d{2}-\d{3}$/.test(text) || /^\d{3}-\d{1,2}$/.test(text)) {
@@ -61,7 +48,6 @@ async function scrapeGame(slug) {
       }
     });
 
-    // Fallback: body text mein dhundo
     if (!result) {
       const bodyText = $('body').text();
       const match = bodyText.match(/\d{3}-\d{2}-\d{3}|\d{3}-\d{1,2}/);
