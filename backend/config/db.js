@@ -10,10 +10,17 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   timezone: '+05:30',
-  dateStrings: true  // <--- YEH NAYI LINE ADD KARNI HAI
+  dateStrings: true
 });
 
 const db = pool.promise();
+
+// Timezone fix - session level
+db.query("SET time_zone = '+05:30'").then(() => {
+  console.log('✅ Timezone set to IST');
+}).catch(err => {
+  console.error('Timezone set error:', err.message);
+});
 
 // Test connection
 pool.getConnection((err, conn) => {
