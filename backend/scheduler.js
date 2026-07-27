@@ -1,13 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  scheduler.js  —  MatkaKing Auto Result Declarator (FIXED)
-//  Place this file in: backend/scheduler.js
-//  Import in server.js: require('./scheduler');
+//  scheduler.js  —  MatkaKing Auto Result Declarator
 // ─────────────────────────────────────────────────────────────────────────────
 
 process.env.TZ = 'Asia/Kolkata';
 
-const cron = require('node-cron');
-const db   = require('./config/db');
+const cron  = require('node-cron');
+const axios = require('axios');
+const db    = require('./config/db');
 
 // ── GAME PAYOUTS ──────────────────────────────────────────────────────────────
 const GAME_PAYOUTS = {
@@ -56,8 +55,7 @@ async function findBestResult(gameId, session) {
   );
 
   if (bids.length === 0) {
-    const randomPana = ALL_PANAS[Math.floor(Math.random() * ALL_PANAS.length)];
-    return randomPana;
+    return ALL_PANAS[Math.floor(Math.random() * ALL_PANAS.length)];
   }
 
   let bestResult = null;
@@ -197,7 +195,6 @@ async function declareResult(game, openResult, closeResult) {
       if (isWinner) {
         const payout    = GAME_PAYOUTS[bid.game_type] || 9;
         const winAmount = parseFloat(bid.amount) * payout;
-
         await conn.query('UPDATE users SET winning_balance = winning_balance + ? WHERE id = ?', [winAmount, bid.user_id]);
         await conn.query("UPDATE bids SET status='won', win_amount=? WHERE id=?", [winAmount, bid.id]);
         await conn.query(
@@ -205,7 +202,6 @@ async function declareResult(game, openResult, closeResult) {
            VALUES (?, 'credit', 'winning_wallet', ?, ?, ?, 'completed')`,
           [bid.user_id, winAmount, `Auto Result: ${game.name} — ${jodiResult}`, bid.id]
         );
-
         winners++;
         totalPaid += winAmount;
       } else {
@@ -221,72 +217,6 @@ async function declareResult(game, openResult, closeResult) {
     console.error(`❌ [AUTO] ${game.name} result declare failed:`, err.message);
   } finally {
     conn.release();
-  }
-}
-
-// ── OPEN RESULT DECLARE ───────────────────────────────────────────────────────
-// ✅ FIX: result_declared_at check hataya — ab correctly kaam karega
-async function processOpenResults() {
-  try {
-    const now = new Date();
-    const hh  = String(now.getHours()).padStart(2, '0');
-    const mm  = String(now.getMinutes()).padStart(2, '0');
-    const currentTime = `${hh}:${mm}:00`;
-
-    const [games] = await db.query(
-      `SELECT * FROM games
-       WHERE status = 'open'
-         AND open_result IS NULL
-         AND TIME_FORMAT(open_time, '%H:%i:00') = ?`,
-      [currentTime]
-    );
-
-    for (const game of games) {
-      console.log(`🕐 [AUTO OPEN] ${game.name} — Finding best open result...`);
-      const openResult = await findBestResult(game.id, 'open');
-
-      await db.query(
-        `UPDATE games SET open_result = ? WHERE id = ?`,
-        [openResult, game.id]
-      );
-      console.log(`✅ [AUTO OPEN] ${game.name} | Open Result: ${openResult} (digit: ${panaDigit(openResult)})`);
-    }
-  } catch (err) {
-    console.error('❌ [AUTO OPEN] Error:', err.message);
-  }
-}
-
-// ── CLOSE RESULT DECLARE ──────────────────────────────────────────────────────
-// ✅ FIX: result_declared_at check hataya — ab correctly kaam karega
-async function processCloseResults() {
-  try {
-    const now = new Date();
-    const hh  = String(now.getHours()).padStart(2, '0');
-    const mm  = String(now.getMinutes()).padStart(2, '0');
-    const currentTime = `${hh}:${mm}:00`;
-
-    const [games] = await db.query(
-      `SELECT * FROM games
-       WHERE status = 'open'
-         AND close_result IS NULL
-         AND TIME_FORMAT(result_time, '%H:%i:00') = ?`,
-      [currentTime]
-    );
-
-    for (const game of games) {
-      console.log(`🕐 [AUTO CLOSE] ${game.name} — Finding best close result...`);
-
-      let openResult = game.open_result;
-      if (!openResult) {
-        openResult = await findBestResult(game.id, 'open');
-        console.log(`⚠️  [AUTO CLOSE] ${game.name} — Open result bhi nahi tha, auto set: ${openResult}`);
-      }
-
-      const closeResult = await findBestResult(game.id, 'close');
-      await declareResult(game, openResult, closeResult);
-    }
-  } catch (err) {
-    console.error('❌ [AUTO CLOSE] Error:', err.message);
   }
 }
 
@@ -310,36 +240,24 @@ async function dailyReset() {
 
 // ── CRON JOBS ─────────────────────────────────────────────────────────────────
 
-// ❌ AUTO RESULT BAND — sirf dpboss scraper se result aayega
-// cron.schedule('* * * * *', () => {
-//   processOpenResults();
-// }, { timezone: 'Asia/Kolkata' });
-
-// cron.schedule('* * * * *', () => {
-//   processCloseResults();
-// }, { timezone: 'Asia/Kolkata' });
-
-// ✅ Sirf daily reset rakho
+// ✅ Sirf daily reset
 cron.schedule('0 0 * * *', () => {
   dailyReset();
 }, { timezone: 'Asia/Kolkata' });
 
-console.log('🤖 [SCHEDULER] MatkaKing Auto Result System STARTED');
-console.log('   → Har minute: open/close result check');
-console.log('   → Raat 12 baje: daily reset');
-
-const cron = require('node-cron');
-const axios = require('axios');
-
-// Har 5 minute mein dpboss se result sync karo
+// ✅ Har 5 min dpboss se auto-sync
 cron.schedule('*/5 * * * *', async () => {
   try {
     const PORT = process.env.PORT || 5000;
     const res  = await axios.get(`http://localhost:${PORT}/api/scraper/sync`);
-    console.log(`✅ Auto-sync: ${res.data.message}`);
+    console.log(`🌐 [AUTO SCRAPE] ${res.data.message}`);
   } catch (e) {
-    console.log('❌ Auto-sync failed:', e.message);
+    console.log('❌ [AUTO SCRAPE] Failed:', e.message);
   }
-});
+}, { timezone: 'Asia/Kolkata' });
+
+console.log('🤖 [SCHEDULER] MatkaKing Auto Result System STARTED');
+console.log('   → Har 5 min: dpboss se result auto-sync');
+console.log('   → Raat 12 baje: daily reset');
 
 module.exports = { declareResult, findBestResult };
