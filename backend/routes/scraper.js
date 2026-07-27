@@ -6,7 +6,6 @@ const db      = require('../config/db');
 
 const BASE = 'https://dpbossss.boston/panel-chart-record';
 
-// DB game name (lowercase) → dpboss slug
 const GAME_SLUGS = {
   'karnataka day':  'karnataka-day',
   'milan morning':  'milan-morning',
@@ -19,7 +18,6 @@ const GAME_SLUGS = {
   'kalyan':         'kalyan',
 };
 
-// ─── Result parser ────────────────────────────────────────────────────────────
 function parseResult(str) {
   const clean = (str || '').replace(/\s/g, '');
   const parts = clean.split('-');
@@ -28,7 +26,17 @@ function parseResult(str) {
   return null;
 }
 
-// ─── Single game page scrape ──────────────────────────────────────────────────
+// Today's date check — DD/MM/YYYY ya D/M/YYYY format
+function isTodayRow(dateText) {
+  const now = new Date();
+  const day   = now.getDate();
+  const month = now.getMonth() + 1;
+  const year  = now.getFullYear();
+  // e.g. "27/07/2026"
+  const pattern = new RegExp(`\\b${day}[/.-]0?${month}[/.-]${year}\\b`);
+  return pattern.test(dateText);
+}
+
 async function scrapeGame(slug) {
   try {
     const url = `${BASE}/${slug}.php`;
@@ -38,23 +46,61 @@ async function scrapeGame(slug) {
     });
 
     const $ = cheerio.load(html);
-    let result = '';
+    let result = null;
 
+    // ── Strategy 1: Bottom result box (agar aaj ka declare hua ho) ──
+    // dpboss pe game name ke neeche result hota hai page ke bottom mein
+    let bottomResult = '';
     $('font, b, strong, h2, h3, p, div, td').each((i, el) => {
       const text = $(el).text().trim();
       if (/^\d{3}-\d{2}-\d{3}$/.test(text) || /^\d{3}-\d{1,2}$/.test(text)) {
-        result = text;
+        bottomResult = text;
         return false;
       }
     });
 
-    if (!result) {
-      const bodyText = $('body').text();
-      const match = bodyText.match(/\d{3}-\d{2}-\d{3}|\d{3}-\d{1,2}/);
-      if (match) result = match[0];
-    }
+    // ── Strategy 2: Table mein aaj ki date wali row dhundo ──
+    let tableResult = '';
+    $('table tr').each((i, row) => {
+      const rowText = $(row).text();
 
-    return result || null;
+      // Aaj ki date is row mein hai?
+      if (isTodayRow(rowText)) {
+        // Is row ya next rows mein jodi/result dhundo (bold red number)
+        const jodiEl = $(row).find('b, font[color="red"], strong');
+        jodiEl.each((j, el) => {
+          const t = $(el).text().trim();
+          if (/^\d{2}$/.test(t)) { // jodi = 2 digit
+            tableResult = t;
+            return false;
+          }
+        });
+
+        // Pana bhi dhundo
+        const cells = $(row).find('td');
+        let panas = [];
+        cells.each((j, td) => {
+          const t = $(td).text().trim();
+          if (/^\d{3}$/.test(t)) panas.push(t);
+        });
+
+        if (panas.length >= 2 && tableResult) {
+          tableResult = `${panas[0]}-${tableResult}-${panas[1]}`;
+        } else if (panas.length >= 1 && tableResult) {
+          tableResult = `${panas[0]}-${tableResult}`;
+        }
+        return false;
+      }
+    });
+
+    // ── Priority: bottom result > table result ──
+    // Bottom result = aaj ka live declared result
+    // Table result = aaj ki row se
+    result = bottomResult || tableResult || null;
+
+    // ── Agar result nahi mila toh null return karo ──
+    return result;
+
   } catch (e) {
     console.log(`❌ Scrape failed for ${slug}:`, e.message);
     return null;
@@ -94,8 +140,10 @@ router.get('/sync', async (req, res) => {
       }
 
       const result = await scrapeGame(slug);
+
+      // ✅ Result nahi mila toh skip karo — DB touch mat karo
       if (!result) {
-        unmatched.push({ db_game: dbGame.name, slug, reason: 'No result on page' });
+        unmatched.push({ db_game: dbGame.name, slug, reason: 'No result declared yet' });
         continue;
       }
 
