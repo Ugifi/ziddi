@@ -34,13 +34,22 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const [amt, setAmt] = useState('');
   const [bets, setBets] = useState([]);
   const [oddEven, setOddEven] = useState('');
-  const [openClose, setOpenClose] = useState('open');
   const [cycleDigit, setCycleDigit] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const chips = [10, 50, 100, 200, 500];
   const id = gameType.id;
   const nt = gameType.numType;
+
+  // ── SESSION LOGIC ────────────────────────────────────────────
+  // open_result aa gaya → open session band, sirf close allow
+  // dono aa gaye → dono band (ye page tak user aayega hi nahi normally)
+  const openDeclared  = !!game.open_result;
+  const closeDeclared = !!game.close_result;
+
+  // default session: agar open declared hai toh 'close', warna 'open'
+  const defaultSession = openDeclared ? 'close' : 'open';
+  const [openClose, setOpenClose] = useState(defaultSession);
 
   const getCycleJodis = (d) => {
     if (d === null) return [];
@@ -83,6 +92,17 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
   const handleSubmit = async () => {
     if (submitting) return;
+
+    // ── FRONTEND GUARD: open session block ───────────────────
+    if (openDeclared && openClose === 'open') {
+      alert('Open result declare ho chuka hai. Sirf CLOSE session pe bet laga sakte ho.');
+      return;
+    }
+    if (openDeclared && closeDeclared) {
+      alert('Aaj ke liye game band ho chuka hai. Dono results declare ho gaye hain.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const commonData = { session: openClose };
@@ -178,15 +198,30 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
     </div>
   );
 
+  // ── SESSION TOGGLE: open declared hone ke baad open disable ──
   const SessionToggle = () => (
     <div className="bf-fg">
       <label className="bf-label">Select Session</label>
+      {openDeclared && (
+        <div className="bf-session-notice">
+          ⚠️ Open result declare ho gaya. Sirf <strong>CLOSE</strong> session available hai.
+        </div>
+      )}
       <div className="bf-session-row">
-        {['open','close'].map(s => (
-          <div key={s} className={`bf-session-btn${openClose === s ? ' active' : ''}`} onClick={() => setOpenClose(s)}>
-            {s === 'open' ? '🌅 OPEN' : '🌙 CLOSE'}
-          </div>
-        ))}
+        {['open', 'close'].map(s => {
+          const isDisabled = openDeclared && s === 'open';
+          return (
+            <div
+              key={s}
+              className={`bf-session-btn${openClose === s ? ' active' : ''}${isDisabled ? ' disabled' : ''}`}
+              onClick={() => !isDisabled && setOpenClose(s)}
+              style={isDisabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+            >
+              {s === 'open' ? '🌅 OPEN' : '🌙 CLOSE'}
+              {isDisabled && <div style={{ fontSize: 9, marginTop: 2, letterSpacing: 0 }}>Result Declared</div>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -271,6 +306,13 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         }
         .bf-desc-box strong { color: #0D47A1; }
 
+        .bf-session-notice {
+          background: #FFF3E0; border: 1px solid #FFB74D;
+          border-radius: 8px; padding: 8px 12px; margin-bottom: 10px;
+          font-size: 12px; color: #E65100; font-weight: 600; line-height: 1.5;
+        }
+        .bf-session-notice strong { color: #BF360C; }
+
         .bf-fg   { margin-bottom: 14px; }
         .bf-label { font-size: 11px; color: #1565C0; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 7px; }
 
@@ -352,6 +394,8 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         }
         .bf-session-btn:hover { border-color: #1976D2; }
         .bf-session-btn.active { background: linear-gradient(135deg,#1565C0,#1976D2); color: #fff; border-color: #1565C0; }
+        .bf-session-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+        .bf-session-btn.disabled:hover { border-color: #BBDEFB; }
 
         .bf-add-btn {
           width: 100%; background: #EEF4FF; color: #1565C0;
