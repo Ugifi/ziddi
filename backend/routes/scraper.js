@@ -26,17 +26,6 @@ function parseResult(str) {
   return null;
 }
 
-// Today's date check — DD/MM/YYYY ya D/M/YYYY format
-function isTodayRow(dateText) {
-  const now = new Date();
-  const day   = now.getDate();
-  const month = now.getMonth() + 1;
-  const year  = now.getFullYear();
-  // e.g. "27/07/2026"
-  const pattern = new RegExp(`\\b${day}[/.-]0?${month}[/.-]${year}\\b`);
-  return pattern.test(dateText);
-}
-
 async function scrapeGame(slug) {
   try {
     const url = `${BASE}/${slug}.php`;
@@ -46,60 +35,50 @@ async function scrapeGame(slug) {
     });
 
     const $ = cheerio.load(html);
+
+    // Aaj ki date
+    const now      = new Date();
+    const day      = String(now.getDate()).padStart(2, '0');
+    const month    = String(now.getMonth() + 1).padStart(2, '0');
+    const year     = now.getFullYear();
+    const todayStr = `${day}/${month}/${year}`; // "27/07/2026"
+
     let result = null;
 
-    // ── Strategy 1: Bottom result box (agar aaj ka declare hua ho) ──
-    // dpboss pe game name ke neeche result hota hai page ke bottom mein
-    let bottomResult = '';
-    $('font, b, strong, h2, h3, p, div, td').each((i, el) => {
-      const text = $(el).text().trim();
-      if (/^\d{3}-\d{2}-\d{3}$/.test(text) || /^\d{3}-\d{1,2}$/.test(text)) {
-        bottomResult = text;
-        return false;
-      }
-    });
-
-    // ── Strategy 2: Table mein aaj ki date wali row dhundo ──
-    let tableResult = '';
+    // Table mein aaj ki date wali row dhundo
     $('table tr').each((i, row) => {
-      const rowText = $(row).text();
+      const rowText = $(row).text().replace(/\s+/g, ' ').trim();
+      if (!rowText.includes(todayStr)) return;
 
-      // Aaj ki date is row mein hai?
-      if (isTodayRow(rowText)) {
-        // Is row ya next rows mein jodi/result dhundo (bold red number)
-        const jodiEl = $(row).find('b, font[color="red"], strong');
-        jodiEl.each((j, el) => {
-          const t = $(el).text().trim();
-          if (/^\d{2}$/.test(t)) { // jodi = 2 digit
-            tableResult = t;
-            return false;
-          }
-        });
+      let jodi  = '';
+      let panas = [];
 
-        // Pana bhi dhundo
-        const cells = $(row).find('td');
-        let panas = [];
-        cells.each((j, td) => {
-          const t = $(td).text().trim();
-          if (/^\d{3}$/.test(t)) panas.push(t);
-        });
+      $(row).find('td').each((j, td) => {
+        const t = $(td).text().trim();
 
-        if (panas.length >= 2 && tableResult) {
-          tableResult = `${panas[0]}-${tableResult}-${panas[1]}`;
-        } else if (panas.length >= 1 && tableResult) {
-          tableResult = `${panas[0]}-${tableResult}`;
+        // Jodi = exactly 2 digits, red/bold
+        if (/^\d{2}$/.test(t) && !jodi) {
+          const isRed = $(td).find('font[color], b').length > 0 ||
+                        $(td).css('color') === 'red';
+          if (isRed) jodi = t;
         }
-        return false;
+
+        // Pana = exactly 3 digits
+        if (/^\d{3}$/.test(t)) panas.push(t);
+      });
+
+      if (panas.length >= 2 && jodi) {
+        result = `${panas[0]}-${jodi}-${panas[1]}`;
+      } else if (panas.length === 1 && jodi) {
+        result = `${panas[0]}-${jodi}`;
+      } else if (jodi) {
+        result = jodi;
       }
+
+      return false; // break
     });
 
-    // ── Priority: bottom result > table result ──
-    // Bottom result = aaj ka live declared result
-    // Table result = aaj ki row se
-    result = bottomResult || tableResult || null;
-
-    // ── Agar result nahi mila toh null return karo ──
-    return result;
+    return result; // null agar aaj ka result nahi mila
 
   } catch (e) {
     console.log(`❌ Scrape failed for ${slug}:`, e.message);
@@ -141,7 +120,7 @@ router.get('/sync', async (req, res) => {
 
       const result = await scrapeGame(slug);
 
-      // ✅ Result nahi mila toh skip karo — DB touch mat karo
+      // Result nahi mila toh skip — DB touch mat karo
       if (!result) {
         unmatched.push({ db_game: dbGame.name, slug, reason: 'No result declared yet' });
         continue;
