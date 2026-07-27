@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Browser } from '@capacitor/browser';
 
 // ── BLUE THEME SHARED STYLES ──
 const B = {
@@ -80,12 +81,16 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
     setStep(2);
   };
 
-  const handlePayWithApp = () => {
-    const amt = parseFloat(amount);
-    if (!upiId) { setMsg({ type: 'err', text: '❌ UPI ID load nahi hui. Dobara try karo.' }); return; }
-    const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('MatkaKing')}&am=${amt}&cu=INR&tn=${encodeURIComponent('Safe & Secure Payment')}`;
+  const handlePayWithApp = async () => {
+  const amt = parseFloat(amount);
+  if (!upiId) { setMsg({ type: 'err', text: '❌ UPI ID load nahi hui. Dobara try karo.' }); return; }
+  const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('Safe & Secure Payment')}&am=${amt}&cu=INR&tn=${encodeURIComponent('Safe & Secure Payment')}`;
+  try {
+    await Browser.open({ url: link });
+  } catch {
     window.location.href = link;
-  };
+  }
+};
 
   const handleSubmitUTR = async () => {
     if (!utr || utr.trim().length < 8) { setMsg({ type: 'err', text: '❌ Valid Transaction Number / UTR daalo' }); return; }
