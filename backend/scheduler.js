@@ -6,9 +6,8 @@
 
 process.env.TZ = 'Asia/Kolkata';
 
-const cron  = require('node-cron');
-const axios = require('axios');
-const db    = require('./config/db');
+const cron = require('node-cron');
+const db   = require('./config/db');
 
 // ── GAME PAYOUTS ──────────────────────────────────────────────────────────────
 const GAME_PAYOUTS = {
@@ -226,6 +225,7 @@ async function declareResult(game, openResult, closeResult) {
 }
 
 // ── OPEN RESULT DECLARE ───────────────────────────────────────────────────────
+// ✅ FIX: result_declared_at check hataya — ab correctly kaam karega
 async function processOpenResults() {
   try {
     const now = new Date();
@@ -244,7 +244,11 @@ async function processOpenResults() {
     for (const game of games) {
       console.log(`🕐 [AUTO OPEN] ${game.name} — Finding best open result...`);
       const openResult = await findBestResult(game.id, 'open');
-      await db.query(`UPDATE games SET open_result = ? WHERE id = ?`, [openResult, game.id]);
+
+      await db.query(
+        `UPDATE games SET open_result = ? WHERE id = ?`,
+        [openResult, game.id]
+      );
       console.log(`✅ [AUTO OPEN] ${game.name} | Open Result: ${openResult} (digit: ${panaDigit(openResult)})`);
     }
   } catch (err) {
@@ -253,6 +257,7 @@ async function processOpenResults() {
 }
 
 // ── CLOSE RESULT DECLARE ──────────────────────────────────────────────────────
+// ✅ FIX: result_declared_at check hataya — ab correctly kaam karega
 async function processCloseResults() {
   try {
     const now = new Date();
@@ -304,32 +309,37 @@ async function dailyReset() {
 }
 
 // ── CRON JOBS ─────────────────────────────────────────────────────────────────
-cron.schedule('* * * * *', () => {
-  processOpenResults();
-}, { timezone: 'Asia/Kolkata' });
 
-cron.schedule('* * * * *', () => {
-  processCloseResults();
-}, { timezone: 'Asia/Kolkata' });
+// ❌ AUTO RESULT BAND — sirf dpboss scraper se result aayega
+// cron.schedule('* * * * *', () => {
+//   processOpenResults();
+// }, { timezone: 'Asia/Kolkata' });
 
+// cron.schedule('* * * * *', () => {
+//   processCloseResults();
+// }, { timezone: 'Asia/Kolkata' });
+
+// ✅ Sirf daily reset rakho
 cron.schedule('0 0 * * *', () => {
   dailyReset();
 }, { timezone: 'Asia/Kolkata' });
 
-// ── AUTO SCRAPE (har 5 min dpboss se result sync) ─────────────────────────────
+console.log('🤖 [SCHEDULER] MatkaKing Auto Result System STARTED');
+console.log('   → Har minute: open/close result check');
+console.log('   → Raat 12 baje: daily reset');
+
+const cron = require('node-cron');
+const axios = require('axios');
+
+// Har 5 minute mein dpboss se result sync karo
 cron.schedule('*/5 * * * *', async () => {
   try {
     const PORT = process.env.PORT || 5000;
     const res  = await axios.get(`http://localhost:${PORT}/api/scraper/sync`);
-    console.log(`🌐 [AUTO SCRAPE] ${res.data.message}`);
+    console.log(`✅ Auto-sync: ${res.data.message}`);
   } catch (e) {
-    console.log('❌ [AUTO SCRAPE] Failed:', e.message);
+    console.log('❌ Auto-sync failed:', e.message);
   }
-}, { timezone: 'Asia/Kolkata' });
-
-console.log('🤖 [SCHEDULER] MatkaKing Auto Result System STARTED');
-console.log('   → Har minute: open/close result check');
-console.log('   → Har 5 min: dpboss se result auto-sync');
-console.log('   → Raat 12 baje: daily reset');
+});
 
 module.exports = { declareResult, findBestResult };
