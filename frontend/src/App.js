@@ -13,7 +13,7 @@ import AdminPanel, { AdminLogin } from './pages/AdminPanel';
 
 import { INIT_BIDS, INIT_TXNS } from './data/gameData';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API = 'https://ziddi-1-we11.onrender.com';
 
 function apiCall(path, method = 'GET', body = null) {
   const token = localStorage.getItem('mk_token');
