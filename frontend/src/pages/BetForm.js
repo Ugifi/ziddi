@@ -4,6 +4,29 @@ import { SINGLE_PANAS, DOUBLE_PANAS, TRIPLE_PANAS } from '../data/gameData';
 const DIGITS = [0,1,2,3,4,5,6,7,8,9];
 const JODIS = Array.from({length:100},(_,i)=>String(i).padStart(2,'0'));
 
+// ── FIXED: AmtInput bahar move kiya — focus problem fix ──
+function AmtInput({ amt, setAmt, chips, label = 'Bid Amount (Min ₹10)' }) {
+  return (
+    <div className="bf-fg">
+      <label className="bf-label">{label}</label>
+      <input
+        className="bf-input"
+        type="number"
+        placeholder="₹0"
+        value={amt}
+        onChange={e => setAmt(e.target.value)}
+        inputMode="numeric"
+        autoComplete="off"
+      />
+      <div className="bf-chips-row">
+        {chips.map(c => (
+          <div key={c} className={`bf-chip${amt === String(c) ? ' active' : ''}`} onClick={() => setAmt(String(c))}>₹{c}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const [num, setNum] = useState('');
   const [num2, setNum2] = useState('');
@@ -83,18 +106,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
       setSubmitting(false);
     }
   };
-
-  const AmtInput = ({ label = 'Bid Amount (Min ₹10)' }) => (
-    <div className="bf-fg">
-      <label className="bf-label">{label}</label>
-      <input className="bf-input" type="number" placeholder="₹0" value={amt} onChange={e => setAmt(e.target.value)}/>
-      <div className="bf-chips-row">
-        {chips.map(c => (
-          <div key={c} className={`bf-chip${amt === String(c) ? ' active' : ''}`} onClick={() => setAmt(String(c))}>₹{c}</div>
-        ))}
-      </div>
-    </div>
-  );
 
   const WinInfo = () => (
     <div className="bf-infobox">
@@ -182,7 +193,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
   return (
     <div className="bf-wrap">
-      {/* Banner — Blue */}
+      {/* Banner */}
       <div className="bf-banner">
         <div className="bf-banner-icon">{game.icon}</div>
         <div>
@@ -197,32 +208,31 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
 
         {id !== 'jodi' && id !== 'jodi_bulk' && id !== 'jodi_digit' && <SessionToggle />}
 
-        {id === 'single_digit'      && <><div className="bf-fg"><label className="bf-label">Pick a Digit (0–9)</label><NumGrid selected={num} onSelect={v => { setNum(v); setActiveN(Number(v)); }} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'single_digit_bulk' && <><div className="bf-fg"><label className="bf-label">Pick Digits</label><NumGrid selected={num} onSelect={setNum} /></div><AmtInput/><AddBtn label="+ Add Digit"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
-        {id === 'jodi_digit'        && <><div className="bf-fg"><label className="bf-label">Pick Jodi (00–99)</label><JodiGrid selected={num} onSelect={setNum} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'jodi_bulk'         && <><div className="bf-fg"><label className="bf-label">Pick Jodi</label><JodiGrid selected={num} onSelect={setNum} /></div><AmtInput/><AddBtn label="+ Add Jodi"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
-        {id === 'single_pana'       && <><div className="bf-fg"><label className="bf-label">Pick Single Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'single_pana_bulk'  && <><div className="bf-fg"><label className="bf-label">Pick Single Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
-        {id === 'double_pana'       && <><div className="bf-fg"><label className="bf-label">Pick Double Pana</label><PanaGrid panas={DOUBLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'double_pana_bulk'  && <><div className="bf-fg"><label className="bf-label">Pick Double Pana</label><PanaGrid panas={DOUBLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
-        {id === 'triple_pana'       && <><div className="bf-fg"><label className="bf-label">Pick Triple Pana</label><PanaGrid panas={TRIPLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'half_sangam_a'     && <><div className="bf-fg"><label className="bf-label">Open Digit (0–9)</label><NumGrid selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Close Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num2} onSelect={setNum2} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'half_sangam_b'     && <><div className="bf-fg"><label className="bf-label">Open Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Close Digit (0–9)</label><NumGrid selected={num2} onSelect={setNum2} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'full_sangam'       && <><div className="bf-fg"><label className="bf-label">Open Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Close Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num2} onSelect={setNum2} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'odd_even'          && <><div className="bf-fg"><label className="bf-label">Bet On</label><div className="bf-session-row">{['ODD','EVEN'].map(oe => (<div key={oe} className={`bf-session-btn${oddEven === oe ? ' active' : ''}`} onClick={() => setOddEven(oe)}>{oe}</div>))}</div></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {(id==='dp_motor'||id==='sp_motor') && <><div className="bf-fg"><label className="bf-label">Pick Pana</label><PanaGrid panas={id==='dp_motor'?DOUBLE_PANAS:SINGLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
-        {id === 'red_jodi'          && <><div className="bf-fg"><label className="bf-label">Pick Jodi</label><JodiGrid selected={num} onSelect={setNum} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'cycle_jodi'        && <><div className="bf-fg"><label className="bf-label">Pick a Digit to Cycle</label><NumGrid selected={cycleDigit !== null ? String(cycleDigit) : ''} onSelect={v => setCycleDigit(Number(v))} /></div>{cycleDigit !== null && <div className="bf-desc-box">Will add <strong>{cycleJodis.length} jodis</strong>: {cycleJodis.slice(0,6).join(', ')}...</div>}<AmtInput label="Amount per jodi"/><AddBtn label="+ Add All Cycle Jodis"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
-        {id === 'sp_dp_tp'          && <><div className="bf-fg"><label className="bf-label">Enter Pana Number</label><input className="bf-input" type="text" placeholder="e.g. 128" maxLength={3} value={num} onChange={e => setNum(e.target.value)}/></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'two_digit_pana'    && <><div className="bf-fg"><label className="bf-label">Pick Jodi (2-digit)</label><JodiGrid selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Pick Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num2} onSelect={setNum2} /></div><AmtInput/><WinInfo/><PlaceBtn/></>}
-        {id === 'digit_jodi'        && <><div className="bf-fg"><label className="bf-label">Open or Close?</label><div className="bf-session-row">{['open','close'].map(s => (<div key={s} className={`bf-session-btn${openClose === s ? ' active' : ''}`} onClick={() => setOpenClose(s)}>{s.toUpperCase()}</div>))}</div></div><div className="bf-fg"><label className="bf-label">Pick a Digit</label><NumGrid selected={activeN !== null ? String(activeN) : ''} onSelect={v => setActiveN(Number(v))} /></div>{activeN !== null && <div className="bf-desc-box">Will add <strong>{digitJodis.length} jodis</strong>: {digitJodis.join(', ')}</div>}<AmtInput label="Amount per jodi"/><AddBtn label="+ Add Digit Jodis"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
-        {(id==='sp_common'||id==='dp_common') && <><div className="bf-fg"><label className="bf-label">Pick {id==='sp_common'?'Single':'Double'} Pana</label><PanaGrid panas={id==='sp_common'?SINGLE_PANAS:DOUBLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {id === 'single_digit'      && <><div className="bf-fg"><label className="bf-label">Pick a Digit (0–9)</label><NumGrid selected={num} onSelect={v => { setNum(v); setActiveN(Number(v)); }} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'single_digit_bulk' && <><div className="bf-fg"><label className="bf-label">Pick Digits</label><NumGrid selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Bid Amount (Min ₹10)"/><AddBtn label="+ Add Digit"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {id === 'jodi_digit'        && <><div className="bf-fg"><label className="bf-label">Pick Jodi (00–99)</label><JodiGrid selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'jodi_bulk'         && <><div className="bf-fg"><label className="bf-label">Pick Jodi</label><JodiGrid selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><AddBtn label="+ Add Jodi"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {id === 'single_pana'       && <><div className="bf-fg"><label className="bf-label">Pick Single Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'single_pana_bulk'  && <><div className="bf-fg"><label className="bf-label">Pick Single Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {id === 'double_pana'       && <><div className="bf-fg"><label className="bf-label">Pick Double Pana</label><PanaGrid panas={DOUBLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'double_pana_bulk'  && <><div className="bf-fg"><label className="bf-label">Pick Double Pana</label><PanaGrid panas={DOUBLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {id === 'triple_pana'       && <><div className="bf-fg"><label className="bf-label">Pick Triple Pana</label><PanaGrid panas={TRIPLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'half_sangam_a'     && <><div className="bf-fg"><label className="bf-label">Open Digit (0–9)</label><NumGrid selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Close Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num2} onSelect={setNum2} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'half_sangam_b'     && <><div className="bf-fg"><label className="bf-label">Open Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Close Digit (0–9)</label><NumGrid selected={num2} onSelect={setNum2} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'full_sangam'       && <><div className="bf-fg"><label className="bf-label">Open Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Close Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num2} onSelect={setNum2} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'odd_even'          && <><div className="bf-fg"><label className="bf-label">Bet On</label><div className="bf-session-row">{['ODD','EVEN'].map(oe => (<div key={oe} className={`bf-session-btn${oddEven === oe ? ' active' : ''}`} onClick={() => setOddEven(oe)}>{oe}</div>))}</div></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {(id==='dp_motor'||id==='sp_motor') && <><div className="bf-fg"><label className="bf-label">Pick Pana</label><PanaGrid panas={id==='dp_motor'?DOUBLE_PANAS:SINGLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {id === 'red_jodi'          && <><div className="bf-fg"><label className="bf-label">Pick Jodi</label><JodiGrid selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'cycle_jodi'        && <><div className="bf-fg"><label className="bf-label">Pick a Digit to Cycle</label><NumGrid selected={cycleDigit !== null ? String(cycleDigit) : ''} onSelect={v => setCycleDigit(Number(v))} /></div>{cycleDigit !== null && <div className="bf-desc-box">Will add <strong>{cycleJodis.length} jodis</strong>: {cycleJodis.slice(0,6).join(', ')}...</div>}<AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Amount per jodi"/><AddBtn label="+ Add All Cycle Jodis"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {id === 'sp_dp_tp'          && <><div className="bf-fg"><label className="bf-label">Enter Pana Number</label><input className="bf-input" type="text" placeholder="e.g. 128" maxLength={3} value={num} onChange={e => setNum(e.target.value)}/></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'two_digit_pana'    && <><div className="bf-fg"><label className="bf-label">Pick Jodi (2-digit)</label><JodiGrid selected={num} onSelect={setNum} /></div><div className="bf-fg"><label className="bf-label">Pick Pana</label><PanaGrid panas={SINGLE_PANAS} selected={num2} onSelect={setNum2} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><WinInfo/><PlaceBtn/></>}
+        {id === 'digit_jodi'        && <><div className="bf-fg"><label className="bf-label">Open or Close?</label><div className="bf-session-row">{['open','close'].map(s => (<div key={s} className={`bf-session-btn${openClose === s ? ' active' : ''}`} onClick={() => setOpenClose(s)}>{s.toUpperCase()}</div>))}</div></div><div className="bf-fg"><label className="bf-label">Pick a Digit</label><NumGrid selected={activeN !== null ? String(activeN) : ''} onSelect={v => setActiveN(Number(v))} /></div>{activeN !== null && <div className="bf-desc-box">Will add <strong>{digitJodis.length} jodis</strong>: {digitJodis.join(', ')}</div>}<AmtInput amt={amt} setAmt={setAmt} chips={chips} label="Amount per jodi"/><AddBtn label="+ Add Digit Jodis"/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
+        {(id==='sp_common'||id==='dp_common') && <><div className="bf-fg"><label className="bf-label">Pick {id==='sp_common'?'Single':'Double'} Pana</label><PanaGrid panas={id==='sp_common'?SINGLE_PANAS:DOUBLE_PANAS} selected={num} onSelect={setNum} /></div><AmtInput amt={amt} setAmt={setAmt} chips={chips}/><AddBtn/><BulkTable/>{bets.length > 0 && <PlaceAllBtn/>}</>}
       </div>
 
       <style>{`
         .bf-wrap { background: #f0f4ff; min-height: 100vh; padding-bottom: 80px; }
 
-        /* ── BANNER — Blue ── */
         .bf-banner {
           background: linear-gradient(135deg, #1565C0, #1976D2);
           padding: 14px 16px;
@@ -241,14 +251,12 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         .bf-banner-name { font-size: 18px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
         .bf-banner-sub  { font-size: 12px; color: rgba(255,255,255,0.82); margin-top: 2px; }
 
-        /* ── CARD ── */
         .bf-card {
           background: #fff; margin: 12px; border-radius: 16px; padding: 16px;
           box-shadow: 0 2px 12px rgba(21,101,192,0.10);
           border: 1.5px solid #BBDEFB;
         }
 
-        /* ── TITLE ── */
         .bf-title {
           font-size: 16px; font-weight: 800; color: #1565C0;
           margin-bottom: 10px;
@@ -256,7 +264,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
           text-transform: uppercase; letter-spacing: 1px;
         }
 
-        /* ── DESC BOX ── */
         .bf-desc-box {
           background: #EEF4FF; border: 1px solid #90CAF9;
           border-radius: 10px; padding: 9px 12px; margin-bottom: 14px;
@@ -264,21 +271,19 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         }
         .bf-desc-box strong { color: #0D47A1; }
 
-        /* ── FORM GROUP ── */
         .bf-fg   { margin-bottom: 14px; }
         .bf-label { font-size: 11px; color: #1565C0; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 7px; }
 
-        /* ── INPUT ── */
         .bf-input {
           width: 100%; background: #F5F9FF;
           border: 2px solid #BBDEFB; border-radius: 10px;
           padding: 11px 14px; color: #0D47A1; font-size: 16px;
           outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+          box-sizing: border-box;
         }
         .bf-input:focus { border-color: #1976D2; box-shadow: 0 0 0 3px rgba(21,101,192,0.12); }
         .bf-input::placeholder { color: rgba(21,101,192,0.30); }
 
-        /* ── AMOUNT CHIPS ── */
         .bf-chips-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
         .bf-chip {
           background: #EEF4FF; border: 1.5px solid #BBDEFB;
@@ -289,7 +294,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         .bf-chip:hover { background: #BBDEFB; border-color: #1976D2; }
         .bf-chip.active { background: linear-gradient(135deg,#1565C0,#1E88E5); color: #fff; border-color: #1565C0; }
 
-        /* ── WIN INFO ── */
         .bf-infobox {
           background: #E8F5E9; border: 1px solid #A5D6A7;
           border-radius: 10px; padding: 9px 14px; margin-bottom: 12px;
@@ -297,7 +301,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         }
         .bf-infobox strong { color: #1B5E20; font-size: 14px; }
 
-        /* ── DIGIT GRID ── */
         .bf-num-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; margin-bottom: 4px; }
         .bf-nchip {
           background: #EEF4FF; border: 2px solid #BBDEFB;
@@ -308,7 +311,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         .bf-nchip:hover { border-color: #1976D2; transform: scale(1.08); }
         .bf-nchip.active { background: linear-gradient(135deg,#1565C0,#1E88E5); color: #fff; border-color: #1565C0; }
 
-        /* ── JODI GRID ── */
         .bf-jodi-scroll {
           max-height: 200px; overflow-y: auto;
           border: 2px solid #BBDEFB; border-radius: 10px;
@@ -326,7 +328,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         .bf-jchip:hover { background: #BBDEFB; }
         .bf-jchip.active { background: linear-gradient(135deg,#1565C0,#1E88E5); color: #fff; }
 
-        /* ── PANA GRID ── */
         .bf-pana-grid {
           display: grid; grid-template-columns: repeat(4,1fr); gap: 6px;
           max-height: 200px; overflow-y: auto; margin-bottom: 4px;
@@ -342,7 +343,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         .bf-pchip:hover { border-color: #1976D2; transform: scale(1.05); }
         .bf-pchip.active { background: linear-gradient(135deg,#1565C0,#1E88E5); color: #fff; border-color: #1565C0; }
 
-        /* ── SESSION TOGGLE ── */
         .bf-session-row { display: flex; gap: 10px; }
         .bf-session-btn {
           flex: 1; text-align: center; padding: 11px 0;
@@ -353,7 +353,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         .bf-session-btn:hover { border-color: #1976D2; }
         .bf-session-btn.active { background: linear-gradient(135deg,#1565C0,#1976D2); color: #fff; border-color: #1565C0; }
 
-        /* ── ADD BTN ── */
         .bf-add-btn {
           width: 100%; background: #EEF4FF; color: #1565C0;
           border: 2px dashed #90CAF9; border-radius: 10px;
@@ -362,7 +361,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         }
         .bf-add-btn:hover { background: #BBDEFB; border-color: #1976D2; }
 
-        /* ── BULK TABLE ── */
         .bf-bulk-table-wrap { overflow-x: auto; margin-bottom: 8px; border: 1.5px solid #BBDEFB; border-radius: 10px; }
         .bf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .bf-table th { background: #EEF4FF; color: #1565C0; padding: 9px 10px; text-align: left; font-weight: 700; letter-spacing: 1px; font-size: 11px; }
@@ -371,7 +369,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         .bf-del { background: #FFEBEE; color: #D32F2F; border: 1px solid #FFCDD2; border-radius: 5px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: 700; transition: all 0.15s; }
         .bf-del:hover { background: #D32F2F; color: #fff; }
 
-        /* ── TOTAL ROW ── */
         .bf-total-row {
           display: flex; justify-content: space-between; align-items: center;
           background: #EEF4FF; border: 1px solid #90CAF9;
@@ -380,7 +377,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         .bf-total-row span   { font-size: 13px; color: #1565C0; font-weight: 600; }
         .bf-total-row strong { font-size: 16px; color: #0D47A1; font-weight: 800; }
 
-        /* ── PLACE BID BTN — Blue ── */
         .bf-place-btn {
           width: 100%;
           background: linear-gradient(135deg, #1565C0, #1976D2, #42A5F5);
