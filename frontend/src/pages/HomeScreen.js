@@ -116,11 +116,9 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     let openRes = g.open_result;
     let closeRes = g.close_result;
 
-    // Agar open_time se 30 sec nahi beet gaye, toh open result mat dikhao
     if (openRes && !isTimePassed(g.open_time, 30)) {
       openRes = null;
     }
-    // Agar close_time se 30 sec nahi beet gaye, toh close result mat dikhao
     if (closeRes && !isTimePassed(g.close_time, 30)) {
       closeRes = null;
     }
@@ -142,7 +140,24 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     return `${open}-${jodi}-${close}`;
   };
 
-  const isRunning = (g) => g.status === 'open';
+  // ✅ NEW STATUS LOGIC: Time aur Result ke hisaab se status decide karega
+  const getGameStatus = (g) => {
+    const now = new Date();
+    const currentTime = now.toTimeString().split(' ')[0]; // "HH:MM:SS"
+    
+    // 1. Agar close time guzar gaya ya dono result aa gaye
+    if (currentTime >= g.close_time || (g.open_result && g.close_result)) {
+      return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
+    }
+    
+    // 2. Agar open result aa gaya hai (close time nahi hua)
+    if (g.open_result) {
+      return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
+    }
+    
+    // 3. Agar open result nahi aaya hai
+    return { text: 'Market is open', canPlay: true, className: 'hs-status-running' };
+  };
 
   const formatTime = (timeStr) => {
     if (!timeStr) return '--:--';
@@ -217,7 +232,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
           </div>
         ) : (
           disawarGames.map((g) => {
-            const open = isRunning(g);
+            const status = getGameStatus(g);
             return (
               <div key={g.id} className="hs-card">
                 <div className="hs-card-top">
@@ -234,12 +249,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
                 <div className="hs-result">
                   <span className="hs-result-text">{formatResult(g)}</span>
                 </div>
-                {g.open_result && !g.close_result
-                  ? <div className="hs-status-running">Running for close</div>
-                  : open
-                    ? <div className="hs-status-running">Market is open</div>
-                    : <div className="hs-status-closed">Closed for today</div>
-                }
+                <div className={status.className}>{status.text}</div>
                 <div className="hs-card-divider" />
                 <div className="hs-bottom-row">
                   <div className="hs-time-wrap">
@@ -253,8 +263,8 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
                       <div className="hs-time-val">{formatTime(g.close_time)}</div>
                     </div>
                   </div>
-                  <button className="hs-play-circle" onClick={() => open && onPlay(g)} disabled={!open}>
-                    {open ? <div className="hs-play-tri" /> : <div className="hs-play-tri-off" />}
+                  <button className="hs-play-circle" onClick={() => status.canPlay && onPlay(g)} disabled={!status.canPlay}>
+                    {status.canPlay ? <div className="hs-play-tri" /> : <div className="hs-play-tri-off" />}
                   </button>
                 </div>
               </div>
@@ -410,7 +420,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         <div style={{ textAlign: 'center', padding: 40, color: '#8a9bb5', fontWeight: 700 }}>No games available</div>
       ) : (
         games.map((g) => {
-          const open = isRunning(g);
+          const status = getGameStatus(g);
           return (
             <div key={g.id} className="hs-card">
               <div className="hs-card-top">
@@ -427,12 +437,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
               <div className="hs-result">
                 <span className="hs-result-text">{formatResult(g)}</span>
               </div>
-              {g.open_result && !g.close_result
-                ? <div className="hs-status-running">Running for close</div>
-                : open
-                  ? <div className="hs-status-running">Market is open</div>
-                  : <div className="hs-status-closed">Closed for today</div>
-              }
+              <div className={status.className}>{status.text}</div>
               <div className="hs-card-divider" />
               <div className="hs-bottom-row">
                 <div className="hs-time-wrap">
@@ -446,8 +451,8 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
                     <div className="hs-time-val">{formatTime(g.close_time)}</div>
                   </div>
                 </div>
-                <button className="hs-play-circle" onClick={() => open && onPlay(g)} disabled={!open}>
-                  {open ? <div className="hs-play-tri" /> : <div className="hs-play-tri-off" />}
+                <button className="hs-play-circle" onClick={() => status.canPlay && onPlay(g)} disabled={!status.canPlay}>
+                  {status.canPlay ? <div className="hs-play-tri" /> : <div className="hs-play-tri-off" />}
                 </button>
               </div>
             </div>
