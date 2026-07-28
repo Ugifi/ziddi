@@ -16,7 +16,8 @@ router.get('/stats', async (req, res) => {
     const [[pendingDep]]   = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="deposit" AND status="pending"');
     const [[pendingWith]]  = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="withdrawal" AND status="pending"');
     const [[totalDeposit]] = await db.query('SELECT SUM(amount) as total FROM deposit_requests WHERE type="deposit" AND status="approved"');
-    const [[totalWin]]     = await db.query('SELECT SUM(win_amount) as total FROM bids WHERE status="won"');
+    // ✅ FIX: 'won' ko 'win' kiya
+    const [[totalWin]]     = await db.query('SELECT SUM(win_amount) as total FROM bids WHERE status="win"');
     const [[totalWallet]]  = await db.query('SELECT SUM(wallet_balance) as w, SUM(winning_balance) as ww FROM users');
 
     res.json({
@@ -78,7 +79,8 @@ router.get('/users/:id', async (req, res) => {
     if (!user.length) return res.status(404).json({ success: false, message: 'User not found' });
 
     const [bids]  = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM bids WHERE user_id = ?', [req.params.id]);
-    const [wins]  = await db.query('SELECT COUNT(*) as total, SUM(win_amount) as volume FROM bids WHERE user_id = ? AND status = "won"', [req.params.id]);
+    // ✅ FIX: 'won' ko 'win' kiya
+    const [wins]  = await db.query('SELECT COUNT(*) as total, SUM(win_amount) as volume FROM bids WHERE user_id = ? AND status = "win"', [req.params.id]);
     const [txns]  = await db.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10', [req.params.id]);
 
     res.json({
@@ -262,15 +264,15 @@ router.put('/games/:id/result', [
     await conn.beginTransaction();
 
     await conn.query(
-      `UPDATE games SET open_result=?, close_result=?, jodi_result=?, status='closed', result_declared_at=NOW() WHERE id=?`,
+      `UPDATE games SET open_result=?, close_result=?, jodi_result=?, status='closed', result_date=CURDATE(), result_declared_at=NOW() WHERE id=?`,
       [open_result, close_result, jodi_result, gameId]
     );
 
     const [bids] = await conn.query("SELECT * FROM bids WHERE game_id = ? AND status = 'pending'", [gameId]);
 
     const GAME_PAYOUTS = {
-      single_digit: 9.5, jodi: 95, single_pana: 150, double_pana: 300, triple_pana: 700,
-      half_sangam_a: 1000, half_sangam_b: 1000, full_sangam: 10000, sp_motor: 150,
+      single_digit: 9, jodi: 90, single_pana: 150, double_pana: 300, triple_pana: 600,
+      half_sangam_a: 1500, half_sangam_b: 1500, full_sangam: 10000, sp_motor: 150,
       dp_motor: 300, tp_motor: 600, odd_even: 2, family_jodi: 90, cycle_pana: 150,
       sp_dp_tp: 150, red_bracket: 9, common_digit: 9, choice_sangam: 10000,
       open_close: 9, jackpot: 9000, panel_group: 150, gunule: 9
@@ -323,7 +325,8 @@ router.put('/games/:id/result', [
         const payout    = GAME_PAYOUTS[bid.game_type] || 9;
         const winAmount = parseFloat(bid.amount) * payout;
         await conn.query('UPDATE users SET winning_balance = winning_balance + ? WHERE id = ?', [winAmount, bid.user_id]);
-        await conn.query("UPDATE bids SET status='won', win_amount=? WHERE id=?", [winAmount, bid.id]);
+        // ✅ FIX: 'won' ko 'win' kiya
+        await conn.query("UPDATE bids SET status='win', win_amount=? WHERE id=?", [winAmount, bid.id]);
         await conn.query(
           `INSERT INTO transactions (user_id, type, wallet_type, amount, description, reference_id, status)
            VALUES (?, 'credit', 'winning_wallet', ?, ?, ?, 'completed')`,
@@ -332,7 +335,8 @@ router.put('/games/:id/result', [
         totalWinners++;
         totalPaid += winAmount;
       } else {
-        await conn.query("UPDATE bids SET status='lost' WHERE id=?", [bid.id]);
+        // ✅ FIX: 'lost' ko 'loss' kiya
+        await conn.query("UPDATE bids SET status='loss' WHERE id=?", [bid.id]);
       }
     }
 
@@ -421,7 +425,6 @@ router.put('/deposits/:id', [
       );
 
       // 2. ✅ REFERRAL BONUS LOGIC
-      // Check karo: kya is joiner ka koi pending referral bonus hai?
       const [pendingBonus] = await conn.query(
         "SELECT * FROM referral_bonuses WHERE joiner_id = ? AND status = 'pending' LIMIT 1",
         [dep.user_id]
@@ -430,7 +433,6 @@ router.put('/deposits/:id', [
       if (pendingBonus.length) {
         const bonus = pendingBonus[0];
 
-        // Referrer ko ₹50 wallet mein do
         await conn.query(
           'UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?',
           [REFERRAL_BONUS, bonus.referrer_id]
@@ -441,7 +443,6 @@ router.put('/deposits/:id', [
           [bonus.referrer_id, REFERRAL_BONUS]
         );
 
-        // Joiner ko bhi ₹50 wallet mein do
         await conn.query(
           'UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?',
           [REFERRAL_BONUS, dep.user_id]
@@ -452,7 +453,6 @@ router.put('/deposits/:id', [
           [dep.user_id, REFERRAL_BONUS]
         );
 
-        // Bonus status credited kar do
         await conn.query(
           "UPDATE referral_bonuses SET status = 'credited', credited_at = NOW() WHERE id = ?",
           [bonus.id]
@@ -551,7 +551,7 @@ router.get('/bids', async (req, res) => {
     const game_id = req.query.game_id || null;
 
     let query = `SELECT b.*, u.name, u.mobile, g.name as game_name,
-     DATE_FORMAT(d.created_at, '%d/%m/%Y, %h:%i %p') as created_at
+     DATE_FORMAT(b.created_at, '%d/%m/%Y, %h:%i %p') as created_at
     FROM bids b
       JOIN users u ON b.user_id = u.id
       JOIN games g ON b.game_id = g.id WHERE 1=1`;
