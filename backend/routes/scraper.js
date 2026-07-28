@@ -8,7 +8,7 @@ const db      = require('../config/db');
 function getISTDate() {
   const now = new Date();
   const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-  return ist.toISOString().split('T')[0]; // "2024-07-27"
+  return ist.toISOString().split('T')[0]; // "2024-07-28"
 }
 
 function getCurrentISTMinutes() {
@@ -25,18 +25,38 @@ function timeToMinutes(timeStr) {
 
 // ── Main page se sab games scrape karo ───────────────────────────────────────
 async function scrapeAllGames() {
-  const { data: html } = await axios.get('https://dpbossss.boston', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0',
-      'Cache-Control': 'no-cache',
-    },
-    timeout: 15000
-  });
+  const fetchSite = async () => {
+    return await axios.get('https://dpbossss.boston', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache',
+      },
+      timeout: 20000
+    });
+  };
+
+  let html;
+  try {
+    const response = await fetchSite();
+    html = response.data;
+  } catch (err1) {
+    console.log('⚠️ Scraper Error (Attempt 1):', err1.message, '| Retrying in 3 seconds...');
+    await new Promise(resolve => setTimeout(resolve, 3000)); // 3 sec wait
+    try {
+      const response = await fetchSite();
+      html = response.data;
+    } catch (err2) {
+      console.log('❌ Scraper Error (Attempt 2):', err2.message);
+      return []; // Agar dobara fail hua toh khali return
+    }
+  }
 
   const $ = cheerio.load(html);
   const games = [];
 
-  // h4 tags mein game names + results hain
   $('h4').each((i, el) => {
     const $el = $(el);
     const gameName = $el.text().trim().toUpperCase()
@@ -44,7 +64,6 @@ async function scrapeAllGames() {
 
     if (!gameName || gameName.length < 2) return;
 
-    // Next sibling text (result line)
     let resultText = '';
     let nextNode = el.nextSibling;
     while (nextNode) {
@@ -55,33 +74,30 @@ async function scrapeAllGames() {
       nextNode = nextNode.nextSibling;
     }
 
-    // Agar text node se nahi mila toh next element dekho
     if (!resultText) {
       const nextEl = $el.next();
       resultText = nextEl.text().trim().replace(/\s/g, '');
     }
 
-    // Pattern: 469-99-667 ya 200-2 ya 469-9 (partial)
+    // ✅ FIX 1: Agar site par Loading ya Wait likha hai, toh usko skip karo
+    if (resultText.toLowerCase().includes('loading') || resultText.toLowerCase().includes('wait')) {
+      return; 
+    }
+
     const fullMatch  = resultText.match(/^(\d{3})-(\d{2})-(\d{3})$/);
     const openOnly   = resultText.match(/^(\d{3})-(\d{1,2})$/);
 
     if (fullMatch) {
       games.push({
-        gameName,
-        result: resultText,
-        open_result:  fullMatch[1],
-        jodi_result:  fullMatch[2],
-        close_result: fullMatch[3],
-        is_complete:  true
+        gameName, result: resultText,
+        open_result: fullMatch[1], jodi_result: fullMatch[2], close_result: fullMatch[3],
+        is_complete: true
       });
     } else if (openOnly) {
       games.push({
-        gameName,
-        result: resultText,
-        open_result:  openOnly[1],
-        jodi_result:  null,
-        close_result: null,
-        is_complete:  false
+        gameName, result: resultText,
+        open_result: openOnly[1], jodi_result: null, close_result: null,
+        is_complete: false
       });
     }
   });
@@ -116,7 +132,7 @@ router.get('/sync', async (req, res) => {
   }
 });
 
-// ── MAIN SYNC FUNCTION (scheduler bhi use karega) ────────────────────────────
+// ── MAIN SYNC FUNCTION ───────────────────────────────────────────────────────
 async function syncResults() {
   const games = await scrapeAllGames();
   if (!games.length) return { success: false, message: 'Kuch scrape nahi hua' };
@@ -127,8 +143,7 @@ async function syncResults() {
   const [dbGames] = await db.query(
     `SELECT id, name, open_time, close_time, open_result, close_result, result_date
      FROM games 
-     WHERE status != 'deleted' AND (result_date = ? OR result_date IS NULL)`,
-    [todayDate]
+     WHERE status != 'deleted'`
   );
 
   let updated = 0, skipped = 0;
@@ -138,31 +153,64 @@ async function syncResults() {
     const dbGame = dbGames.find(g => isExactMatch(g.name, item.gameName));
     if (!dbGame) continue;
 
-    // ── TIME-BASED UPDATE LOGIC ────────────────────────────────────────────
     const openMin  = timeToMinutes(dbGame.open_time);
     const closeMin = timeToMinutes(dbGame.close_time);
 
-    // Open result tabhi update karo jab open_time guzar chuka ho
-    const openAllowed = !openMin || nowMinutes >= openMin;
-    // Close result tabhi update karo jab close_time guzar chuka ho
-    const closeAllowed = !closeMin || nowMinutes >= closeMin;
+    const openTimePassed = !openMin || nowMinutes >= openMin;
+    const closeTimePassed = !closeMin || nowMinutes >= closeMin;
 
-    const openChanged  = openAllowed && !dbGame.open_result  && item.open_result;
-    const closeChanged = closeAllowed && !dbGame.close_result && item.close_result;
+    let updateOpen = false;
+    let updateClose = false;
+
+    // ── TUMHARA LOGIC: Purana Data Block ──────────────────────────────────────
+    if (item.is_complete) {
+      // Site par Open + Close dono sath mein aaye hain (e.g., 469-99-667)
+      if (!closeTimePassed) {
+        // Agar close time nahi hua, toh ye kal ka purana data hai. SKIP KARO!
+        skipped++;
+        continue;
+      }
+      // Agar close time ho gaya hai, toh close result update karo (agar DB se alag hai)
+      if (dbGame.close_result !== item.close_result) {
+        updateClose = true;
+        updateOpen = true;
+      }
+    } else {
+      // Site par sirf Open aaya hai (e.g., 469-9)
+      if (openTimePassed) {
+        // Open time ho gaya hai, toh open result update karo (agar DB se alag hai)
+        if (dbGame.open_result !== item.open_result) {
+          updateOpen = true;
+        }
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
+    if (!updateOpen && !updateClose) { skipped++; continue; }
+
+    if (updateOpen) {
+      await db.query(
+        `UPDATE games SET 
+          open_result = ?, 
+          jodi_result = ?, 
+          result_date = CURDATE(), 
+          result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30') 
+         WHERE id = ?`,
+        [item.open_result, item.jodi_result, dbGame.id]
+      );
+    }
     
-    if (!openChanged && !closeChanged) { skipped++; continue; }
-
-    // ✅ FIX: Yaha result_date = CURDATE() add kiya hai 12 AM Reset ke liye
-    await db.query(
-      `UPDATE games SET
-        open_result        = COALESCE(open_result, ?),
-        jodi_result        = COALESCE(jodi_result, ?),
-        close_result       = COALESCE(close_result, ?),
-        result_date        = CURDATE(),
-        result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30')
-       WHERE id = ?`,
-      [item.open_result, item.jodi_result, item.close_result, dbGame.id]
-    );
+    if (updateClose) {
+      await db.query(
+        `UPDATE games SET 
+          close_result = ?, 
+          jodi_result = ?, 
+          result_date = CURDATE(), 
+          result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30') 
+         WHERE id = ?`,
+        [item.close_result, item.jodi_result, dbGame.id]
+      );
+    }
 
     updated++;
     log.push({ game: dbGame.name, result: item.result });
