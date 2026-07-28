@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-
 // ── BLUE THEME SHARED STYLES ──
 const B = {
   page:      { background: '#eef2f7', minHeight: '100vh', paddingBottom: 80, color: '#222', fontFamily: '"Nunito", "Segoe UI", sans-serif' },
@@ -32,13 +31,12 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
   const [qrUrl, setQrUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState({ type: '', text: '' });
+  const [upiCopied, setUpiCopied] = useState(false);
 
   const presets = [100, 200, 500, 1000, 2000, 5000];
 
   useEffect(() => {
     if (!apiCall) return;
-
-    // Pehle /api/payment-info try karo (fast, no auth needed)
     apiCall('/api/payment-info').then(res => {
       if (res?.success && res?.data?.upi_id) {
         const s = res.data;
@@ -53,7 +51,6 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
           );
         }
       } else {
-        // Fallback: admin settings se lo
         apiCall('/api/admin/settings').then(res2 => {
           if (res2?.success && res2?.settings?.upi_id) {
             const s = res2.settings;
@@ -81,16 +78,13 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
     setStep(2);
   };
 
-  const handlePayWithApp = async () => {
-  const amt = parseFloat(amount);
-  if (!upiId) { setMsg({ type: 'err', text: '❌ UPI ID load nahi hui. Dobara try karo.' }); return; }
-  const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent('Safe & Secure Payment')}&am=${amt}&cu=INR&tn=${encodeURIComponent('Safe & Secure Payment')}`;
-  try {
-    await Browser.open({ url: link });
-  } catch {
-    window.location.href = link;
-  }
-};
+  const copyUpi = () => {
+    if (!upiId) return;
+    navigator.clipboard.writeText(upiId).then(() => {
+      setUpiCopied(true);
+      setTimeout(() => setUpiCopied(false), 2000);
+    });
+  };
 
   const handleSubmitUTR = async () => {
     if (!utr || utr.trim().length < 8) { setMsg({ type: 'err', text: '❌ Valid Transaction Number / UTR daalo' }); return; }
@@ -124,6 +118,8 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
           <div style={{ fontSize: 18, fontWeight: 900, color: '#0d1f40' }}>{step === 1 ? '💰 Add Money' : '📱 Pay ₹' + amount}</div>
           <div onClick={onClose} style={{ fontSize: 22, cursor: 'pointer', color: '#8a9bb5', fontWeight: 300 }}>✕</div>
         </div>
+
+        {/* ── STEP 1: Amount Select ── */}
         {step === 1 && (
           <div style={{ padding: '0 20px' }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12 }}>Quick Amount</div>
@@ -141,43 +137,91 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
             <div style={{ textAlign: 'center', marginTop: 12, fontSize: 11, color: '#8a9bb5' }}>💡 Deposit approve hone mein 15-30 min lagte hain</div>
           </div>
         )}
+
+        {/* ── STEP 2: Pay ── */}
         {step === 2 && (
           <div style={{ padding: '0 20px' }}>
+
+            {/* Amount Banner */}
             <div style={{ background: 'linear-gradient(135deg,#1a3a6e,#2a6dd9)', borderRadius: 16, padding: '16px', textAlign: 'center', marginBottom: 20 }}>
               <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Pay Amount</div>
               <div style={{ color: '#fff', fontSize: 36, fontWeight: 900 }}>₹{parseFloat(amount).toLocaleString('en-IN')}</div>
             </div>
-            <button onClick={handlePayWithApp} style={{ width: '100%', padding: '16px', marginBottom: 8, background: 'linear-gradient(135deg, #00b09b, #1e8a3c)', color: '#fff', border: 'none', borderRadius: 14, fontSize: 16, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 6px 20px rgba(0,176,155,0.4)', letterSpacing: 0.5 }}>
-              <span style={{ fontSize: 22 }}>📱</span> PAY WITH UPI APP
-            </button>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 20, padding: '8px 0' }}>
-              {[['🟢', 'GPay'], ['🔵', 'PhonePe'], ['🟦', 'Paytm'], ['🔴', 'BHIM']].map(([ic, name]) => (
-                <div key={name} style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 20 }}>{ic}</div>
-                  <div style={{ fontSize: 10, color: '#8a9bb5', fontWeight: 700, marginTop: 2 }}>{name}</div>
+
+            {/* QR Code */}
+            {qrUrl && (
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ background: '#fff', border: '2px solid #e2e9f4', borderRadius: 20, display: 'inline-block', padding: 14, boxShadow: '0 4px 20px rgba(26,58,110,0.12)' }}>
+                  <img src={qrUrl} alt="UPI QR" style={{ width: 190, height: 190, display: 'block' }} />
+                </div>
+                <div style={{ marginTop: 10, fontSize: 12, color: '#8a9bb5', fontWeight: 600 }}>Scan karo aur pay karo</div>
+              </div>
+            )}
+
+            {/* UPI ID Copy Box */}
+            {upiId && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 }}>UPI ID</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f4f7fd', border: '2px solid #d0daea', borderRadius: 14, padding: '12px 14px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: '#8a9bb5', fontWeight: 600, marginBottom: 2 }}>Pay to</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#0d1f40', letterSpacing: 0.5 }}>{upiId}</div>
+                  </div>
+                  <button
+                    onClick={copyUpi}
+                    style={{
+                      padding: '10px 16px',
+                      background: upiCopied ? 'linear-gradient(135deg,#1e8a3c,#27ae60)' : 'linear-gradient(135deg,#1e4fa0,#2a6dd9)',
+                      border: 'none',
+                      borderRadius: 10,
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s',
+                      boxShadow: upiCopied ? '0 4px 12px rgba(30,138,60,0.3)' : '0 4px 12px rgba(30,79,160,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    {upiCopied ? '✅ Copied!' : '📋 Copy'}
+                  </button>
+                </div>
+                <div style={{ marginTop: 10, background: '#eef2f7', borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#2a6dd9', fontWeight: 700 }}>
+                  💡 UPI ID copy karo → GPay / PhonePe / Paytm mein paste karo → ₹{parseFloat(amount).toLocaleString('en-IN')} pay karo
+                </div>
+              </div>
+            )}
+
+            {/* Steps */}
+            <div style={{ background: '#fff', border: '1.5px solid #e2e9f4', borderRadius: 14, padding: '14px 16px', marginBottom: 20, boxShadow: '0 2px 8px rgba(26,58,110,0.06)' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12 }}>Payment Steps</div>
+              {[
+                { n: '1', t: 'QR scan karo ya UPI ID copy karo' },
+                { n: '2', t: `₹${parseFloat(amount).toLocaleString('en-IN')} pay karo apne UPI app se` },
+                { n: '3', t: 'Transaction Number / UTR note karo' },
+                { n: '4', t: 'Neeche UTR daalo aur submit karo' },
+              ].map((s, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: i < 3 ? 10 : 0 }}>
+                  <div style={{ width: 26, height: 26, background: 'linear-gradient(135deg,#1e4fa0,#2a6dd9)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12, flexShrink: 0 }}>{s.n}</div>
+                  <div style={{ fontSize: 13, color: '#0d1f40', fontWeight: 600 }}>{s.t}</div>
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-              <div style={{ flex: 1, height: 1, background: '#e2e9f4' }} />
-              <span style={{ fontSize: 11, color: '#8a9bb5', fontWeight: 700 }}>YA SCAN KARKE PAY KARO</span>
-              <div style={{ flex: 1, height: 1, background: '#e2e9f4' }} />
-            </div>
-            {qrUrl && (
-              <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <div style={{ background: '#fff', border: '2px solid #e2e9f4', borderRadius: 16, display: 'inline-block', padding: 12, boxShadow: '0 4px 14px rgba(26,58,110,0.1)' }}>
-                  <img src={qrUrl} alt="UPI QR" style={{ width: 180, height: 180, display: 'block' }} />
-                </div>
-                {upiId && <div style={{ marginTop: 10, fontSize: 13, color: '#8a9bb5' }}>UPI ID: <span style={{ fontWeight: 900, color: '#0d1f40' }}>{upiId}</span></div>}
-              </div>
-            )}
+
+            {/* UTR Input */}
             <label style={B.label}>Transaction Number / UTR</label>
             <input style={B.input} placeholder="12-digit transaction number" value={utr} onChange={e => setUtr(e.target.value)} maxLength={20} />
+
             <div style={{ background: '#eef2f7', borderRadius: 12, padding: '12px 14px', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ fontSize: 12, color: '#1e8a3c', fontWeight: 700 }}>✅ Pay karke Transaction No / UTR daalo</div>
               <div style={{ fontSize: 12, color: '#e74c3c', fontWeight: 700 }}>⏰ Credit within 30 minutes</div>
             </div>
+
             {msg.text && <div style={{ background: msg.type === 'ok' ? '#e8f5e9' : '#fdecea', border: `1px solid ${msg.type === 'ok' ? '#a5d6a7' : '#f5c6cb'}`, borderRadius: 10, padding: '12px', marginBottom: 16, color: msg.type === 'ok' ? '#1e8a3c' : '#c0392b', fontSize: 13, fontWeight: 700 }}>{msg.text}</div>}
+
             <button onClick={handleSubmitUTR} disabled={loading} style={{ ...B.btn, opacity: loading ? 0.6 : 1 }}>{loading ? '⏳ Submitting...' : '✅ SUBMIT UTR'}</button>
             <button onClick={() => { setStep(1); setMsg({ type: '', text: '' }); }} style={{ width: '100%', marginTop: 10, padding: '14px', background: 'transparent', border: '1.5px solid #d0daea', borderRadius: 14, color: '#8a9bb5', fontWeight: 800, cursor: 'pointer', fontSize: 14 }}>← Change Amount</button>
           </div>
@@ -358,13 +402,11 @@ export function ReferralPage({ apiCall, user, onBack }) {
 
   useEffect(() => {
     if (!apiCall) return;
-    // Site URL fetch karo admin settings se
     apiCall('/api/admin/settings').then(res => {
       if (res?.success && res?.settings?.site_url) {
         setSiteUrl(res.settings.site_url.replace(/\/$/, ''));
       }
     }).catch(() => {});
-    // Referral stats fetch karo
     apiCall('/api/auth/referral-stats').then(res => {
       if (res?.success) setReferralData(res.data || {});
       setLoading(false);
@@ -372,8 +414,7 @@ export function ReferralPage({ apiCall, user, onBack }) {
   }, [apiCall]);
 
   const SITE_URL = siteUrl;
-
-  const referralCode = referralData.referral_code || user?.referral_code || user?.referral_code || '';
+  const referralCode = referralData.referral_code || user?.referral_code || '';
   const referralLink = `${SITE_URL}?ref=${referralCode}`;
 
   const copyCode = () => {
@@ -405,8 +446,6 @@ export function ReferralPage({ apiCall, user, onBack }) {
   return (
     <div style={B.page}>
       <SubHeader title="🎁 Refer & Earn" onBack={onBack} />
-
-      {/* Hero Banner */}
       <div style={{ background: 'linear-gradient(135deg, #1a3a6e, #2a6dd9)', margin: '16px 12px', borderRadius: 20, padding: '24px 20px', textAlign: 'center', boxShadow: '0 4px 20px rgba(30,79,160,0.25)' }}>
         <div style={{ fontSize: 48, marginBottom: 8 }}>🎁</div>
         <div style={{ color: '#fff', fontWeight: 900, fontSize: 22, marginBottom: 6 }}>Dono ko ₹50 Bonus!</div>
@@ -430,17 +469,16 @@ export function ReferralPage({ apiCall, user, onBack }) {
         </div>
       </div>
 
-      {/* Referral Code Box */}
       <div style={B.card}>
         <div style={{ fontSize: 12, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14 }}>🔑 Aapka Referral Code</div>
         <div style={{ background: '#eef2f7', borderRadius: 14, padding: '18px', textAlign: 'center', border: '2px dashed #2a6dd9', marginBottom: 14 }}>
           <div style={{ fontSize: 28, fontWeight: 900, color: '#0d1f40', letterSpacing: 4 }}>
-  {loading ? (
-    <span style={{ fontSize: 14, color: '#8a9bb5', letterSpacing: 1 }}>⏳ Loading...</span>
-  ) : referralCode ? referralCode : (
-    <span style={{ fontSize: 13, color: '#c0392b' }}>❌ Code nahi mila — logout karke login karo</span>
-  )}
-</div>
+            {loading ? (
+              <span style={{ fontSize: 14, color: '#8a9bb5', letterSpacing: 1 }}>⏳ Loading...</span>
+            ) : referralCode ? referralCode : (
+              <span style={{ fontSize: 13, color: '#c0392b' }}>❌ Code nahi mila — logout karke login karo</span>
+            )}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={copyCode} style={{ flex: 1, padding: '14px', background: copied ? '#e8f5e9' : '#eef2f7', border: `1.5px solid ${copied ? '#a5d6a7' : '#d0daea'}`, borderRadius: 12, fontWeight: 800, fontSize: 14, cursor: 'pointer', color: copied ? '#1e8a3c' : '#0d1f40', transition: 'all 0.2s' }}>
@@ -452,7 +490,6 @@ export function ReferralPage({ apiCall, user, onBack }) {
         </div>
       </div>
 
-      {/* How it Works */}
       <div style={{ margin: '0 12px', background: '#fff', borderRadius: 16, border: '1.5px solid #e2e9f4', overflow: 'hidden', boxShadow: '0 4px 14px rgba(26,58,110,0.07)', marginBottom: 12 }}>
         <div style={{ padding: '14px 16px', background: '#eef2f7', borderBottom: '1px solid #e2e9f4', fontSize: 12, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5 }}>📋 Kaise Kaam Karta Hai?</div>
         {[
@@ -471,7 +508,6 @@ export function ReferralPage({ apiCall, user, onBack }) {
         ))}
       </div>
 
-      {/* Referral History */}
       {!loading && referralData.referrals && referralData.referrals.length > 0 && (
         <div style={{ margin: '0 12px' }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 }}>👥 Mere Referrals</div>
@@ -549,7 +585,6 @@ export function WalletPage({ wallet, onAdd, onWith, user, navigate, apiCall }) {
         </div>
       </div>
 
-      {/* Menu */}
       <div style={{ background: '#fff', margin: '0 12px 16px', borderRadius: 16, border: '1.5px solid #e2e9f4', overflow: 'hidden', boxShadow: '0 4px 14px rgba(26,58,110,0.07)' }}>
         {[
           { ic: '💰', l: 'Add Fund',           sub: 'UPI, Net Banking, Cards',  fn: handleAdd },
@@ -571,7 +606,6 @@ export function WalletPage({ wallet, onAdd, onWith, user, navigate, apiCall }) {
         ))}
       </div>
 
-      {/* Stats */}
       <div style={{ padding: '8px 12px', fontSize: 12, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>📈 Your Stats</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 12px' }}>
         {[
@@ -756,8 +790,6 @@ export function SupportPage({ apiCall, user }) {
   return (
     <div style={B.page}>
       <SubHeader title="👤 My Profile" />
-
-      {/* Profile Hero */}
       <div style={{ background: 'linear-gradient(135deg, #1a3a6e, #2a6dd9)', margin: '16px 12px', borderRadius: 20, padding: '24px 20px', textAlign: 'center', boxShadow: '0 4px 20px rgba(30,79,160,0.25)' }}>
         <div style={{ width: 80, height: 80, background: 'rgba(255,255,255,0.12)', border: '3px solid rgba(255,255,255,0.35)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: 36, color: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
           {(user?.name || 'U').charAt(0).toUpperCase()}
@@ -767,7 +799,6 @@ export function SupportPage({ apiCall, user }) {
         <div style={{ display: 'inline-block', marginTop: 12, background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '4px 14px', fontSize: 11, color: '#fff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>✅ Verified</div>
       </div>
 
-      {/* ── REFERRAL CODE SECTION ── */}
       {user?.referral_code && (
         <div style={{ margin: '0 12px 12px', background: 'linear-gradient(135deg, #fff8e1, #fff3cd)', borderRadius: 16, border: '1.5px solid #f0c040', padding: '16px', boxShadow: '0 4px 14px rgba(240,192,64,0.15)' }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: '#b8860b', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 }}>🎁 Aapka Referral Code</div>
@@ -831,6 +862,7 @@ export function SupportPage({ apiCall, user }) {
     </div>
   );
 }
+
 // ── GAME RATES PAGE ──
 export function GameRatesPage({ onBack }) {
   const mainRates = [
@@ -853,15 +885,11 @@ export function GameRatesPage({ onBack }) {
     <div style={B.page}>
       <SubHeader title="🎰 Game Rates" onBack={onBack} />
       <div style={{ padding: '16px 12px' }}>
-
-        {/* Header */}
         <div style={{ background: 'linear-gradient(135deg, #1a3a6e, #2a6dd9)', borderRadius: 16, padding: '20px', textAlign: 'center', marginBottom: 20, boxShadow: '0 4px 20px rgba(30,79,160,0.25)' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🏆</div>
           <div style={{ color: '#fff', fontWeight: 900, fontSize: 20, marginBottom: 4 }}>Game Rates</div>
           <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>We have Best Main Market Game Rates</div>
         </div>
-
-        {/* Main Market Rates */}
         <div style={{ fontSize: 12, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12 }}>🎯 Main Market Rates</div>
         {mainRates.map((g, i) => (
           <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '16px 20px', marginBottom: 10, border: '1.5px solid #e2e9f4', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(26,58,110,0.06)', borderLeft: '4px solid #f0c040' }}>
@@ -869,8 +897,6 @@ export function GameRatesPage({ onBack }) {
             <div style={{ fontWeight: 900, fontSize: 15, color: '#2a6dd9', background: '#eef2f7', padding: '6px 14px', borderRadius: 20 }}>{g.rate}</div>
           </div>
         ))}
-
-        {/* Starline Rates */}
         <div style={{ fontSize: 12, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, margin: '20px 0 12px' }}>⭐ Starline Game Rates</div>
         {starlineRates.map((g, i) => (
           <div key={i} style={{ background: '#fff', borderRadius: 14, padding: '16px 20px', marginBottom: 10, border: '1.5px solid #e2e9f4', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(26,58,110,0.06)', borderLeft: '4px solid #2a6dd9' }}>
@@ -878,7 +904,6 @@ export function GameRatesPage({ onBack }) {
             <div style={{ fontWeight: 900, fontSize: 15, color: '#2a6dd9', background: '#eef2f7', padding: '6px 14px', borderRadius: 20 }}>{g.rate}</div>
           </div>
         ))}
-
         <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 12, color: '#8a9bb5', fontWeight: 600 }}>
           We have Best Starline Game Rates
         </div>
