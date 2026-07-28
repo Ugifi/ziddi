@@ -4,159 +4,181 @@ const axios   = require('axios');
 const cheerio = require('cheerio');
 const db      = require('../config/db');
 
-const BASE = 'https://dpbossss.boston/panel-chart-record';
-
-const GAME_SLUGS = {
-  'karnataka day':  'karnataka-day',
-  'milan morning':  'milan-morning',
-  'sridevi':        'sridevi',
-  'time bazar':     'time-bazar',
-  'madhur day':     'madhur-day',
-  'rajdhani day':   'rajdhani-day',
-  'milan day':      'milan-day',
-  'supreme day':    'supreme-day',
-  'kalyan':         'kalyan',
-};
-
-function parseResult(str) {
-  const clean = (str || '').replace(/\s/g, '');
-  const parts = clean.split('-');
-  if (parts.length === 3) return { open_result: parts[0], jodi_result: parts[1], close_result: parts[2] };
-  if (parts.length === 2) return { open_result: parts[0], jodi_result: parts[1], close_result: null };
-  return null;
+// ── IST helpers ───────────────────────────────────────────────────────────────
+function getISTDate() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  return ist.toISOString().split('T')[0]; // "2024-07-27"
 }
 
-async function scrapeGame(slug) {
-  try {
-    const url = `${BASE}/${slug}.php`;
-    const { data: html } = await axios.get(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36' },
-      timeout: 10000
-    });
+function getCurrentISTMinutes() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  return ist.getUTCHours() * 60 + ist.getUTCMinutes();
+}
 
-    const $ = cheerio.load(html);
+function timeToMinutes(timeStr) {
+  if (!timeStr) return null;
+  const parts = timeStr.split(':');
+  return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+}
 
-    // Aaj ki date
-    const now      = new Date();
-    const day      = String(now.getDate()).padStart(2, '0');
-    const month    = String(now.getMonth() + 1).padStart(2, '0');
-    const year     = now.getFullYear();
-    const todayStr = `${day}/${month}/${year}`; // "27/07/2026"
+// ── Main page se sab games scrape karo ───────────────────────────────────────
+async function scrapeAllGames() {
+  const { data: html } = await axios.get('https://dpbossss.boston', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0',
+      'Cache-Control': 'no-cache',
+    },
+    timeout: 15000
+  });
 
-    let result = null;
+  const $ = cheerio.load(html);
+  const games = [];
 
-    // Table mein aaj ki date wali row dhundo
-    $('table tr').each((i, row) => {
-      const rowText = $(row).text().replace(/\s+/g, ' ').trim();
-      if (!rowText.includes(todayStr)) return;
+  // h4 tags mein game names + results hain
+  $('h4').each((i, el) => {
+    const $el = $(el);
+    const gameName = $el.text().trim().toUpperCase()
+      .replace(/\[.*?\]/g, '').replace(/\s+/g, ' ').trim();
 
-      let jodi  = '';
-      let panas = [];
+    if (!gameName || gameName.length < 2) return;
 
-      $(row).find('td').each((j, td) => {
-        const t = $(td).text().trim();
-
-        // Jodi = exactly 2 digits, red/bold
-        if (/^\d{2}$/.test(t) && !jodi) {
-          const isRed = $(td).find('font[color], b').length > 0 ||
-                        $(td).css('color') === 'red';
-          if (isRed) jodi = t;
-        }
-
-        // Pana = exactly 3 digits
-        if (/^\d{3}$/.test(t)) panas.push(t);
-      });
-
-      if (panas.length >= 2 && jodi) {
-        result = `${panas[0]}-${jodi}-${panas[1]}`;
-      } else if (panas.length === 1 && jodi) {
-        result = `${panas[0]}-${jodi}`;
-      } else if (jodi) {
-        result = jodi;
+    // Next sibling text (result line)
+    let resultText = '';
+    let nextNode = el.nextSibling;
+    while (nextNode) {
+      if (nextNode.nodeType === 3) { // text node
+        const t = nextNode.data.trim().replace(/\s/g, '');
+        if (/\d/.test(t)) { resultText = t; break; }
       }
+      nextNode = nextNode.nextSibling;
+    }
 
-      return false; // break
-    });
+    // Agar text node se nahi mila toh next element dekho
+    if (!resultText) {
+      const nextEl = $el.next();
+      resultText = nextEl.text().trim().replace(/\s/g, '');
+    }
 
-    return result; // null agar aaj ka result nahi mila
+    // Pattern: 469-99-667 ya 200-2 ya 469-9 (partial)
+    const fullMatch  = resultText.match(/^(\d{3})-(\d{2})-(\d{3})$/);
+    const openOnly   = resultText.match(/^(\d{3})-(\d{1,2})$/);
 
-  } catch (e) {
-    console.log(`❌ Scrape failed for ${slug}:`, e.message);
-    return null;
-  }
+    if (fullMatch) {
+      games.push({
+        gameName,
+        result: resultText,
+        open_result:  fullMatch[1],
+        jodi_result:  fullMatch[2],
+        close_result: fullMatch[3],
+        is_complete:  true
+      });
+    } else if (openOnly) {
+      games.push({
+        gameName,
+        result: resultText,
+        open_result:  openOnly[1],
+        jodi_result:  null,
+        close_result: null,
+        is_complete:  false
+      });
+    }
+  });
+
+  return games;
 }
 
-// ─── GET /api/scraper/preview ─────────────────────────────────────────────────
+// ── Name matching ─────────────────────────────────────────────────────────────
+function isExactMatch(dbName, scrapedName) {
+  const a = dbName.toLowerCase().trim().replace(/\s+/g, ' ');
+  const b = scrapedName.toLowerCase().trim().replace(/\[.*?\]/g, '').replace(/\s+/g, ' ').trim();
+  return a === b;
+}
+
+// ── GET /api/scraper/preview ──────────────────────────────────────────────────
 router.get('/preview', async (req, res) => {
   try {
-    const results = [];
-    for (const [gameName, slug] of Object.entries(GAME_SLUGS)) {
-      const result = await scrapeGame(slug);
-      results.push({ gameName, slug, result });
-    }
-    res.json({ success: true, total: results.length, data: results });
+    const games = await scrapeAllGames();
+    res.json({ success: true, total: games.length, date: getISTDate(), data: games });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// ─── GET /api/scraper/sync ────────────────────────────────────────────────────
+// ── GET /api/scraper/sync ─────────────────────────────────────────────────────
 router.get('/sync', async (req, res) => {
   try {
-    const [dbGames] = await db.query("SELECT id, name FROM games WHERE status != 'deleted'");
-
-    let updated = 0;
-    const matched   = [];
-    const unmatched = [];
-
-    for (const dbGame of dbGames) {
-      const dbNameLower = dbGame.name.toLowerCase().trim();
-      const slug = GAME_SLUGS[dbNameLower];
-
-      if (!slug) {
-        unmatched.push({ db_game: dbGame.name, reason: 'No slug mapping' });
-        continue;
-      }
-
-      const result = await scrapeGame(slug);
-
-      // Result nahi mila toh skip — DB touch mat karo
-      if (!result) {
-        unmatched.push({ db_game: dbGame.name, slug, reason: 'No result declared yet' });
-        continue;
-      }
-
-      const parsed = parseResult(result);
-      if (!parsed) {
-        unmatched.push({ db_game: dbGame.name, result, reason: 'Parse failed' });
-        continue;
-      }
-
-      await db.query(
-        `UPDATE games SET
-          open_result  = ?,
-          jodi_result  = ?,
-          close_result = ?,
-          result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30')
-         WHERE id = ?`,
-        [parsed.open_result, parsed.jodi_result, parsed.close_result, dbGame.id]
-      );
-
-      updated++;
-      matched.push({ db_game: dbGame.name, slug, result, parsed });
-    }
-
-    res.json({
-      success: true,
-      message: `✅ ${updated} games updated`,
-      matched,
-      unmatched
-    });
-
+    const result = await syncResults();
+    res.json(result);
   } catch (err) {
-    console.error('Sync error:', err.message);
-    res.status(500).json({ success: false, message: 'Sync failed: ' + err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
+// ── MAIN SYNC FUNCTION (scheduler bhi use karega) ────────────────────────────
+async function syncResults() {
+  const games = await scrapeAllGames();
+  if (!games.length) return { success: false, message: 'Kuch scrape nahi hua' };
+
+  const todayDate  = getISTDate();
+  const nowMinutes = getCurrentISTMinutes();
+
+  const [dbGames] = await db.query(
+    `SELECT id, name, open_time, close_time, open_result, close_result, result_date
+     FROM games 
+     WHERE status != 'deleted' AND (result_date = ? OR result_date IS NULL)`,
+    [todayDate]
+  );
+
+  let updated = 0, skipped = 0;
+  const log = [];
+
+  for (const item of games) {
+    const dbGame = dbGames.find(g => isExactMatch(g.name, item.gameName));
+    if (!dbGame) continue;
+
+    // ── TIME-BASED UPDATE LOGIC ────────────────────────────────────────────
+    const openMin  = timeToMinutes(dbGame.open_time);
+    const closeMin = timeToMinutes(dbGame.close_time);
+
+    // Open result tabhi update karo jab open_time guzar chuka ho
+    const openAllowed = !openMin || nowMinutes >= openMin;
+    // Close result tabhi update karo jab close_time guzar chuka ho
+    const closeAllowed = !closeMin || nowMinutes >= closeMin;
+
+    const openChanged  = openAllowed && !dbGame.open_result  && item.open_result;
+    const closeChanged = closeAllowed && !dbGame.close_result && item.close_result;
+    
+    if (!openChanged && !closeChanged) { skipped++; continue; }
+
+    // ✅ FIX: Yaha result_date = CURDATE() add kiya hai 12 AM Reset ke liye
+    await db.query(
+      `UPDATE games SET
+        open_result        = COALESCE(open_result, ?),
+        jodi_result        = COALESCE(jodi_result, ?),
+        close_result       = COALESCE(close_result, ?),
+        result_date        = CURDATE(),
+        result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30')
+       WHERE id = ?`,
+      [item.open_result, item.jodi_result, item.close_result, dbGame.id]
+    );
+
+    updated++;
+    log.push({ game: dbGame.name, result: item.result });
+  }
+
+  return {
+    success:   true,
+    message:   `${updated} games updated`,
+    ist_date:  todayDate,
+    ist_time:  `${Math.floor(nowMinutes/60)}:${String(nowMinutes%60).padStart(2,'0')}`,
+    updated,
+    skipped,
+    log
+  };
+}
+
 module.exports = router;
+module.exports.scrapeAllGames = scrapeAllGames;
+module.exports.syncResults    = syncResults;
