@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken'); // ✅ JWT Added
 const { body, validationResult } = require('express-validator');
 const db = require('../config/db');
 const { adminMiddleware } = require('../middleware/auth');
@@ -16,7 +17,6 @@ router.get('/stats', async (req, res) => {
     const [[pendingDep]]   = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="deposit" AND status="pending"');
     const [[pendingWith]]  = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="withdrawal" AND status="pending"');
     const [[totalDeposit]] = await db.query('SELECT SUM(amount) as total FROM deposit_requests WHERE type="deposit" AND status="approved"');
-    // ✅ FIX: 'won' ko 'win' kiya
     const [[totalWin]]     = await db.query('SELECT SUM(win_amount) as total FROM bids WHERE status="win"');
     const [[totalWallet]]  = await db.query('SELECT SUM(wallet_balance) as w, SUM(winning_balance) as ww FROM users');
 
@@ -79,7 +79,6 @@ router.get('/users/:id', async (req, res) => {
     if (!user.length) return res.status(404).json({ success: false, message: 'User not found' });
 
     const [bids]  = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM bids WHERE user_id = ?', [req.params.id]);
-    // ✅ FIX: 'won' ko 'win' kiya
     const [wins]  = await db.query('SELECT COUNT(*) as total, SUM(win_amount) as volume FROM bids WHERE user_id = ? AND status = "win"', [req.params.id]);
     const [txns]  = await db.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10', [req.params.id]);
 
@@ -90,6 +89,25 @@ router.get('/users/:id', async (req, res) => {
       recent_transactions: txns
     });
   } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ─── LOGIN AS USER (Admin Impersonation) ─────────────────────────────────────
+router.post('/users/:id/login-as', async (req, res) => {
+  try {
+    const [users] = await db.query('SELECT id, name, mobile, role, wallet_balance, winning_balance, is_blocked FROM users WHERE id = ?', [req.params.id]);
+    if (!users.length) return res.status(404).json({ success: false, message: 'User not found' });
+    
+    const user = users[0];
+    if (user.is_blocked) return res.status(400).json({ success: false, message: 'User is blocked' });
+
+    // Generate a temporary token for the user
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '2h' });
+    
+    res.json({ success: true, token, user });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -151,27 +169,28 @@ router.put('/users/:id/coins', [
   }
 });
 
-router.put('/users/:id/reset-password', [
-  body('new_password').isLength({ min: 6 })
+// ── MOBILE NUMBER CHANGE ──────────────────────────────────────
+router.put('/users/:id/change-mobile', [
+  body('mobile').isMobilePhone().withMessage('Valid mobile number required')
 ], async (req, res) => {
-  try {
-    const hashed = await bcrypt.hash(req.body.new_password, 10);
-    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashed, req.params.id]);
-    res.json({ success: true, message: 'Password reset successfully' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
-// ══════════════════════════════════════════════════════════════
-//  GAME MANAGEMENT
-// ══════════════════════════════════════════════════════════════
-
-router.get('/games', async (req, res) => {
   try {
-    const [games] = await db.query('SELECT * FROM games WHERE status != "deleted" ORDER BY created_at DESC');
-    res.json({ success: true, games });
+    const { mobile } = req.body;
+
+    const [existing] = await db.query(
+      'SELECT id FROM users WHERE mobile = ? AND id != ?',
+      [mobile, req.params.id]
+    );
+    if (existing.length) {
+      return res.status(400).json({ success: false, message: 'Yeh mobile number already kisi aur user ke paas hai' });
+    }
+
+    await db.query('UPDATE users SET mobile = ? WHERE id = ?', [mobile, req.params.id]);
+    res.json({ success: true, message: 'Mobile number successfully updated' });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -271,15 +290,12 @@ router.put('/games/:id/result', [
     const [bids] = await conn.query("SELECT * FROM bids WHERE game_id = ? AND status = 'pending'", [gameId]);
 
     const GAME_PAYOUTS = {
-  single_digit: 9.5, jodi: 95, single_pana: 150, double_pana: 300, triple_pana: 700,
-  half_sangam_a: 1000, half_sangam_b: 1000, full_sangam: 10000, sp_motor: 150,
-  dp_motor: 300, tp_motor: 700, odd_even: 2, family_jodi: 95, cycle_pana: 150,
-  sp_dp_tp: 150, red_bracket: 9.5, common_digit: 9.5, choice_sangam: 10000,
-  open_close: 9.5, jackpot: 9000, panel_group: 150, gunule: 9.5,
-  jodi_digit: 95, single_digit_bulk: 9.5, jodi_bulk: 95, red_jodi: 95,
-  cycle_jodi: 95, digit_jodi: 95, sp_common: 150, dp_common: 300,
-  single_pana_bulk: 150, double_pana_bulk: 300, two_digit_pana: 300
-};
+      single_digit: 9, jodi: 90, single_pana: 150, double_pana: 300, triple_pana: 600,
+      half_sangam_a: 1500, half_sangam_b: 1500, full_sangam: 10000, sp_motor: 150,
+      dp_motor: 300, tp_motor: 600, odd_even: 2, family_jodi: 90, cycle_pana: 150,
+      sp_dp_tp: 150, red_bracket: 9, common_digit: 9, choice_sangam: 10000,
+      open_close: 9, jackpot: 9000, panel_group: 150, gunule: 9
+    };
 
     let totalWinners = 0;
     let totalPaid = 0;
@@ -328,7 +344,6 @@ router.put('/games/:id/result', [
         const payout    = GAME_PAYOUTS[bid.game_type] || 9;
         const winAmount = parseFloat(bid.amount) * payout;
         await conn.query('UPDATE users SET winning_balance = winning_balance + ? WHERE id = ?', [winAmount, bid.user_id]);
-        // ✅ FIX: 'won' ko 'win' kiya
         await conn.query("UPDATE bids SET status='win', win_amount=? WHERE id=?", [winAmount, bid.id]);
         await conn.query(
           `INSERT INTO transactions (user_id, type, wallet_type, amount, description, reference_id, status)
@@ -338,7 +353,6 @@ router.put('/games/:id/result', [
         totalWinners++;
         totalPaid += winAmount;
       } else {
-        // ✅ FIX: 'lost' ko 'loss' kiya
         await conn.query("UPDATE bids SET status='loss' WHERE id=?", [bid.id]);
       }
     }
@@ -419,7 +433,6 @@ router.put('/deposits/:id', [
     );
 
     if (action === 'approve') {
-      // 1. User ka wallet credit karo
       await conn.query('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?', [dep.amount, dep.user_id]);
       await conn.query(
         `INSERT INTO transactions (user_id, type, wallet_type, amount, description, reference_id, status)
@@ -427,7 +440,6 @@ router.put('/deposits/:id', [
         [dep.user_id, dep.amount, dep.id]
       );
 
-      // 2. ✅ REFERRAL BONUS LOGIC
       const [pendingBonus] = await conn.query(
         "SELECT * FROM referral_bonuses WHERE joiner_id = ? AND status = 'pending' LIMIT 1",
         [dep.user_id]
