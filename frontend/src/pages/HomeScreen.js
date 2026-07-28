@@ -173,10 +173,25 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     ? settings.ticker_text
     : `📞 Contact: ${settings.phone} &nbsp;&nbsp;&nbsp; 💳 Instant Withdrawal | 100% Safe &nbsp;&nbsp;&nbsp; 📞 Contact: ${settings.phone} &nbsp;&nbsp;&nbsp; 💳 Instant Withdrawal | 100% Safe`;
 
+  // ✅ ADMIN IMPERSONATION CHECK
+  const isAdminImpersonating = localStorage.getItem('mk_admin_token');
+  const backToAdmin = () => {
+    localStorage.setItem('mk_token', localStorage.getItem('mk_admin_token'));
+    localStorage.removeItem('mk_admin_token');
+    window.location.href = '/?admin=1'; // Wapas admin panel
+  };
+
   // ── DISAWAR PAGE ──────────────────────────────────────────────
   if (showDisawar) {
     return (
       <div style={{ background: '#eef2f7', minHeight: '100vh', paddingBottom: 80, fontFamily: "'Nunito', 'Segoe UI', sans-serif" }}>
+        {/* ✅ BACK TO ADMIN BUTTON */}
+        {isAdminImpersonating && (
+          <button onClick={backToAdmin} style={{ position: 'fixed', top: 10, right: 10, zIndex: 9999, background: '#0d1b5e', color: '#FFD700', padding: '8px 16px', borderRadius: 8, fontWeight: 800, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', cursor: 'pointer' }}>
+            ⬅️ Back to Admin
+          </button>
+        )}
+
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap');
           * { box-sizing: border-box; }
@@ -279,6 +294,14 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   // ── MAIN HOME ─────────────────────────────────────────────────
   return (
     <div style={{ background: '#eef2f7', minHeight: '100vh', paddingBottom: 80, fontFamily: "'Nunito', 'Segoe UI', sans-serif" }}>
+      
+      {/* ✅ BACK TO ADMIN BUTTON */}
+      {isAdminImpersonating && (
+        <button onClick={backToAdmin} style={{ position: 'fixed', top: 10, right: 10, zIndex: 9999, background: '#0d1b5e', color: '#FFD700', padding: '8px 16px', borderRadius: 8, fontWeight: 800, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', cursor: 'pointer' }}>
+          ⬅️ Back to Admin
+        </button>
+      )}
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap');
         * { box-sizing: border-box; }
@@ -392,7 +415,6 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         </button>
       </div>
 
-      
 
       {/* LIVE MARKETS */}
       <div className="hs-live-header">
