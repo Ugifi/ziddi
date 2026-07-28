@@ -271,12 +271,15 @@ router.put('/games/:id/result', [
     const [bids] = await conn.query("SELECT * FROM bids WHERE game_id = ? AND status = 'pending'", [gameId]);
 
     const GAME_PAYOUTS = {
-      single_digit: 9, jodi: 90, single_pana: 150, double_pana: 300, triple_pana: 600,
-      half_sangam_a: 1500, half_sangam_b: 1500, full_sangam: 10000, sp_motor: 150,
-      dp_motor: 300, tp_motor: 600, odd_even: 2, family_jodi: 90, cycle_pana: 150,
-      sp_dp_tp: 150, red_bracket: 9, common_digit: 9, choice_sangam: 10000,
-      open_close: 9, jackpot: 9000, panel_group: 150, gunule: 9
-    };
+  single_digit: 9.5, jodi: 95, single_pana: 150, double_pana: 300, triple_pana: 700,
+  half_sangam_a: 1000, half_sangam_b: 1000, full_sangam: 10000, sp_motor: 150,
+  dp_motor: 300, tp_motor: 700, odd_even: 2, family_jodi: 95, cycle_pana: 150,
+  sp_dp_tp: 150, red_bracket: 9.5, common_digit: 9.5, choice_sangam: 10000,
+  open_close: 9.5, jackpot: 9000, panel_group: 150, gunule: 9.5,
+  jodi_digit: 95, single_digit_bulk: 9.5, jodi_bulk: 95, red_jodi: 95,
+  cycle_jodi: 95, digit_jodi: 95, sp_common: 150, dp_common: 300,
+  single_pana_bulk: 150, double_pana_bulk: 300, two_digit_pana: 300
+};
 
     let totalWinners = 0;
     let totalPaid = 0;
