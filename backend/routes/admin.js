@@ -207,7 +207,7 @@ router.post('/games', [
   try {
     const [result] = await db.query(
       'INSERT INTO games (name, open_time, close_time, result_time, game_category, min_bid, max_bid, status, is_hidden) VALUES (?, ?, ?, ?, ?, ?, ?, "closed", 0)',
-      [name, open_time, close_time, close_time, category || 'regular', 10, 1000000]
+      [name, open_time, close_time, close_time, category || 'regular', 10, 100000000]
     );
     res.status(201).json({
       success: true,
