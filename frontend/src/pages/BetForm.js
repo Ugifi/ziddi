@@ -130,7 +130,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const WinInfo = () => (
     <div className="bf-infobox">
       Bid: <strong>₹{Number(amt||0).toLocaleString()}</strong> &nbsp;→&nbsp;
-      Win: <strong>₹{(Number(amt||0)*parseInt(gameType.win)).toLocaleString()}</strong>
+      Win: <strong>₹{(Number(amt||0)*parseFloat(gameType.win)).toLocaleString()}</strong>
     </div>
   );
 
