@@ -42,13 +42,17 @@ const GAME_TYPES = {
   'two_digit_pana':    { name: 'Two Digit Pana',     payout: 300,   min_digits: 3, max_digits: 3 }
 };
 
-// ─── GET ALL GAMES (with optional category filter) ────────────────────────────
+// ─── GET ALL GAMES (with optional category filter & 12AM Reset Logic) ────────
 router.get('/', async (req, res) => {
   try {
     const category = req.query.category || null;
 
+    // Sirf aaj ki date ka result dikhana (12 AM Reset Logic)
     let query = `SELECT id, name, game_category, open_time, close_time, result_time, status,
-                        open_result, close_result, jodi_result, min_bid, max_bid, created_at
+                        CASE WHEN result_date = CURDATE() THEN open_result ELSE NULL END as open_result,
+                        CASE WHEN result_date = CURDATE() THEN close_result ELSE NULL END as close_result,
+                        CASE WHEN result_date = CURDATE() THEN jodi_result ELSE NULL END as jodi_result,
+                        min_bid, max_bid, created_at
                  FROM games WHERE status != 'deleted'`;
     const params = [];
 
@@ -122,21 +126,19 @@ router.post('/bid', authMiddleware, [
 
     const game = games[0];
 
-    // ── SESSION BASED BETTING RESTRICTION ────────────────────────────────────
-    //
-    //  State 1: open_result = NULL, close_result = NULL
-    //           → Market is open → OPEN session allowed, CLOSE session allowed
-    //
-    //  State 2: open_result = "450", close_result = NULL   (Running for close)
-    //           → Open result declare ho gaya
-    //           → OPEN session band karo (result aa gaya, ab open pe bet nahi)
-    //           → CLOSE session allow karo
-    //
-    //  State 3: open_result = "450", close_result = "679"  (Both declared)
-    //           → Dono results aa gaye → Closed for today
-    //           → Koi bhi session allow nahi
-    //
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── CLOSE TIME CHECK (Strict Auto-Close Logic) ───────────────────────────
+    const now = new Date();
+    const currentTime = now.toTimeString().split(' ')[0]; // "HH:MM:SS"
+    
+    if (session === 'open' && currentTime >= game.open_time) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'Open Betting Time is Over!' });
+    }
+    if (session === 'close' && currentTime >= game.close_time) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'Close Betting Time is Over!' });
+    }
+    // ──────────────────────────────────────────────────────────────────────────
 
     const openDeclared  = !!game.open_result;
     const closeDeclared = !!game.close_result;
@@ -169,8 +171,6 @@ router.post('/bid', authMiddleware, [
         });
       }
     }
-
-    // State 1: koi result nahi → dono allow (no extra check needed)
 
     // ── BID AMOUNT LIMITS ────────────────────────────────────────────────────
     const gameMinBid = game.min_bid || minBid;
