@@ -191,8 +191,8 @@ function StatusBadge({ status }) {
     approved: { bg: C.successBg, color: C.success, label: 'Approved' },
     rejected: { bg: C.dangerBg, color: C.danger, label: 'Rejected' },
     pending: { bg: C.badgePend, color: C.badgePendT, label: 'Pending' },
-    won: { bg: C.successBg, color: C.success, label: 'Won' },
-    lost: { bg: C.dangerBg, color: C.danger, label: 'Lost' },
+    win: { bg: C.successBg, color: C.success, label: 'Won' },
+    loss: { bg: C.dangerBg, color: C.danger, label: 'Lost' },
     open: { bg: C.successBg, color: C.success, label: 'Open' },
     closed: { bg: C.dangerBg, color: C.danger, label: 'Closed' },
   };
@@ -316,7 +316,7 @@ function ChangeMobileModal({ user, onClose, onSave }) {
 }
 
 // ─── USER CARD ────────────────────────────────────────────────
-function UserCard({ u, onBlock, onAddCoins, onDeductCoins, onChangeMobile }) {
+function UserCard({ u, onBlock, onAddCoins, onDeductCoins, onChangeMobile, onLoginAs }) {
   return (
     <div style={B.card}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
@@ -345,10 +345,14 @@ function UserCard({ u, onBlock, onAddCoins, onDeductCoins, onChangeMobile }) {
         <ActionBtn onClick={() => onAddCoins(u.id)} color={C.success} bg={C.successBg}>+ Coins</ActionBtn>
         <ActionBtn onClick={() => onDeductCoins(u.id)} color={C.danger} bg={C.dangerBg}>- Coins</ActionBtn>
       </div>
-      {/* Row 2: Change Mobile */}
+      {/* Row 2: Change Mobile / Login As User */}
       <div style={{ display: 'flex', gap: 8 }}>
         <ActionBtn onClick={() => onChangeMobile(u)} color={C.primary} bg={C.badgePend}>
           📱 Change Mobile
+        </ActionBtn>
+        {/* ✅ LOGIN AS USER BUTTON */}
+        <ActionBtn onClick={() => onLoginAs(u.id)} color={C.textMain} bg={C.accentSoft}>
+          🧑‍💻 Login
         </ActionBtn>
       </div>
     </div>
@@ -597,8 +601,7 @@ export default function AdminPanel({ onLogout }) {
             support_hours: s.support_hours || prev.support_hours,
             support_email: s.support_email || prev.support_email,
             min_deposit: s.min_deposit || prev.min_deposit,
-            max_deposit: s.max_deposit || prev.max_deposit,
-            min_withdrawal: s.min_withdrawal || prev.min_withdrawal,
+            max_deposit: s.max_deposit || prev.max_deposit,min_withdrawal: s.min_withdrawal || prev.min_withdrawal,
             max_withdrawal: s.max_withdrawal || prev.max_withdrawal,
             maintenance_mode: s.maintenance_mode || '0',
             qr_image: s.qr_image || '',
@@ -641,6 +644,18 @@ export default function AdminPanel({ onLogout }) {
   // ── CHANGE MOBILE HANDLER ──────────────────────────────────
   const handleChangeMobile = (user) => {
     setChangeMobileUser(user);
+  };
+
+  // ── LOGIN AS USER HANDLER ──────────────────────────────────
+  const loginAsUser = async (id) => {
+    const res = await apiCall(`/api/admin/users/${id}/login-as`, 'POST');
+    if (res.success) {
+      localStorage.setItem('mk_admin_token', localStorage.getItem('mk_token')); // Backup Admin Token
+      localStorage.setItem('mk_token', res.token); // Set User Token
+      window.location.href = '/'; // Redirect to User App
+    } else {
+      showToast('❌ Error: ' + (res.message || 'Failed to login as user'));
+    }
   };
 
   // ── GAME ACTIONS ──
@@ -796,8 +811,7 @@ export default function AdminPanel({ onLogout }) {
       {/* SIDE DRAWER */}
       <div style={{ position: 'fixed', top: 0, left: 0, height: '100%', width: 272, background: C.drawerBg, zIndex: 400, overflowY: 'auto', paddingBottom: 40, transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)', boxShadow: drawerOpen ? '5px 0 40px rgba(0,0,0,0.4)' : 'none' }}>
         <div style={{ background: C.navBg, padding: '24px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{settings.site_name || 'SAKTA MATKA'}</div>
+          <div><div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{settings.site_name || 'SAKTA MATKA'}</div>
             <div style={{ fontSize: 11, color: C.accent, marginTop: 4, fontWeight: 700, letterSpacing: 1 }}>Admin Control Panel</div>
           </div>
           <button onClick={() => setDrawerOpen(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', color: '#fff', fontSize: 18, fontWeight: 'bold' }}>✕</button>
@@ -886,6 +900,7 @@ export default function AdminPanel({ onLogout }) {
                   onAddCoins={addCoins}
                   onDeductCoins={deductCoins}
                   onChangeMobile={handleChangeMobile}
+                  onLoginAs={loginAsUser}
                 />
               ))}
           </div>
@@ -996,8 +1011,7 @@ export default function AdminPanel({ onLogout }) {
 
         {/* ── DECLARE RESULT ── */}
         {!loading && page === 'results' && (
-          <div style={B.card}>
-            <div style={B.title}>🏆 Declare Results</div>
+          <div style={B.card}><div style={B.title}>🏆 Declare Results</div>
             <div style={{ background: '#E3F2FD', border: `1.5px solid #90CAF9`, borderRadius: 10, padding: 12, color: C.primary, fontSize: 12, marginBottom: 16, fontWeight: 600, lineHeight: 1.6 }}>
               Format: <strong>OpenPana-ClosePana</strong> (e.g. <code>128-456</code>)<br />
               Digit auto-calculate hoga. Winners ko winning_balance credit milega.
