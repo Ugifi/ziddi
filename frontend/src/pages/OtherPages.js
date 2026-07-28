@@ -22,12 +22,13 @@ function SubHeader({ title, onBack, rightBtn }) {
   );
 }
 
-// ── DEPOSIT MODAL ──────────────────────────────────────────────────────────────
+// ── DEPOSIT MODAL — REPLACE ONLY THIS FUNCTION IN OtherPages.js ──────────────
 export function DepositModal({ onClose, apiCall, onSuccess }) {
   const [step, setStep] = useState(1);
   const [amount, setAmount] = useState('');
   const [utr, setUtr] = useState('');
   const [upiId, setUpiId] = useState('');
+  const [whatsapp, setWhatsapp] = useState('9999999999');
   const [qrUrl, setQrUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState({ type: '', text: '' });
@@ -41,28 +42,22 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
       if (res?.success && res?.data?.upi_id) {
         const s = res.data;
         setUpiId(s.upi_id);
+        if (s.whatsapp_support) setWhatsapp(s.whatsapp_support);
         if (s.qr_image) {
           setQrUrl(s.qr_image);
         } else {
-          setQrUrl(
-            `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-              `upi://pay?pa=${s.upi_id}&pn=${s.upi_name || 'MatkaKing'}&cu=INR`
-            )}`
-          );
+          setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`upi://pay?pa=${s.upi_id}&pn=${s.upi_name || 'MatkaKing'}&cu=INR`)}`);
         }
       } else {
         apiCall('/api/admin/settings').then(res2 => {
           if (res2?.success && res2?.settings?.upi_id) {
             const s = res2.settings;
             setUpiId(s.upi_id);
+            if (s.whatsapp || s.whatsapp_support) setWhatsapp(s.whatsapp || s.whatsapp_support);
             if (s.qr_image) {
               setQrUrl(s.qr_image);
             } else {
-              setQrUrl(
-                `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                  `upi://pay?pa=${s.upi_id}&pn=${s.upi_name || 'MatkaKing'}&cu=INR`
-                )}`
-              );
+              setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`upi://pay?pa=${s.upi_id}&pn=${s.upi_name || 'MatkaKing'}&cu=INR`)}`);
             }
           }
         }).catch(() => {});
@@ -86,8 +81,17 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
     });
   };
 
+  const openWhatsApp = () => {
+    const num = whatsapp.replace(/\D/g, '');
+    const msg91 = `91${num}`;
+    const text = encodeURIComponent(
+      `💰 *Deposit Request*\n\nAmount: ₹${amount}\nUTR/Transaction ID: ${utr || 'XXXXXXXX'}\n\nKripya jaldi approve karein 🙏`
+    );
+    window.open(`https://wa.me/${msg91}?text=${text}`, '_blank');
+  };
+
   const handleSubmitUTR = async () => {
-    if (!utr || utr.trim().length < 8) { setMsg({ type: 'err', text: '❌ Valid Transaction Number / UTR daalo' }); return; }
+    if (!utr || utr.trim().length < 6) { setMsg({ type: 'err', text: '❌ Valid Transaction Number / UTR daalo' }); return; }
     setLoading(true); setMsg({ type: '', text: '' });
     try {
       const res = await apiCall('/api/wallet/deposit', 'POST', {
@@ -105,132 +109,206 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
     finally { setLoading(false); }
   };
 
-  const overlayStyle = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' };
-  const sheetStyle = { background: '#fff', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, maxHeight: '92vh', overflowY: 'auto', padding: '0 0 32px', boxShadow: '0 -8px 40px rgba(0,0,0,0.2)' };
+  const overlayStyle = {
+    position: 'fixed', inset: 0,
+    background: 'rgba(0,0,0,0.65)',
+    zIndex: 1000,
+    display: 'flex',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    backdropFilter: 'blur(3px)',
+  };
+
+  const sheetStyle = {
+    background: '#fff',
+    borderRadius: '24px 24px 0 0',
+    width: '100%',
+    maxWidth: 520,
+    maxHeight: '94vh',
+    overflowY: 'auto',
+    paddingBottom: 40,
+    boxShadow: '0 -12px 50px rgba(0,0,0,0.25)',
+  };
 
   return (
     <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={sheetStyle}>
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
-          <div style={{ width: 40, height: 4, background: '#d0daea', borderRadius: 4 }} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 16px' }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: '#0d1f40' }}>{step === 1 ? '💰 Add Money' : '📱 Pay ₹' + amount}</div>
-          <div onClick={onClose} style={{ fontSize: 22, cursor: 'pointer', color: '#8a9bb5', fontWeight: 300 }}>✕</div>
+
+        {/* Drag handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0 0' }}>
+          <div style={{ width: 44, height: 5, background: '#d0daea', borderRadius: 10 }} />
         </div>
 
-        {/* ── STEP 1: Amount Select ── */}
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 22px 18px' }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: '#0d1f40' }}>
+              {step === 1 ? '💰 Add Money' : `📱 Pay ₹${parseFloat(amount).toLocaleString('en-IN')}`}
+            </div>
+            <div style={{ fontSize: 12, color: '#8a9bb5', marginTop: 2, fontWeight: 600 }}>
+              {step === 1 ? 'Select ya type karo amount' : 'UPI se payment karo'}
+            </div>
+          </div>
+          <div onClick={onClose} style={{ width: 36, height: 36, background: '#eef2f7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 18, color: '#8a9bb5', fontWeight: 700 }}>✕</div>
+        </div>
+
+        {/* ── STEP 1: Amount ── */}
         {step === 1 && (
-          <div style={{ padding: '0 20px' }}>
+          <div style={{ padding: '0 22px' }}>
+
+            {/* Preset buttons */}
             <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12 }}>Quick Amount</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 22 }}>
               {presets.map(p => (
-                <button key={p} onClick={() => setAmount(String(p))} style={{ padding: '12px 0', borderRadius: 12, cursor: 'pointer', fontWeight: 800, fontSize: 14, background: amount === String(p) ? 'linear-gradient(135deg,#1e4fa0,#2a6dd9)' : '#eef2f7', color: amount === String(p) ? '#fff' : '#0d1f40', border: amount === String(p) ? 'none' : '1.5px solid #d0daea', transition: 'all 0.2s' }}>
+                <button key={p} onClick={() => setAmount(String(p))}
+                  style={{
+                    padding: '14px 0', borderRadius: 14, cursor: 'pointer',
+                    fontWeight: 800, fontSize: 15,
+                    background: amount === String(p) ? 'linear-gradient(135deg,#1e4fa0,#2a6dd9)' : '#f4f7fd',
+                    color: amount === String(p) ? '#fff' : '#0d1f40',
+                    border: amount === String(p) ? 'none' : '2px solid #e2e9f4',
+                    boxShadow: amount === String(p) ? '0 4px 14px rgba(30,79,160,0.3)' : 'none',
+                    transition: 'all 0.2s',
+                  }}>
                   ₹{p.toLocaleString('en-IN')}
                 </button>
               ))}
             </div>
-            <label style={B.label}>Enter Amount (Min ₹100)</label>
-            <input style={{ ...B.input, fontSize: 20, fontWeight: 900, textAlign: 'center' }} type="number" placeholder="₹ Enter amount" value={amount} onChange={e => setAmount(e.target.value)} />
-            {msg.text && <div style={{ background: msg.type === 'ok' ? '#e8f5e9' : '#fdecea', border: `1px solid ${msg.type === 'ok' ? '#a5d6a7' : '#f5c6cb'}`, borderRadius: 10, padding: '12px', marginBottom: 16, color: msg.type === 'ok' ? '#1e8a3c' : '#c0392b', fontSize: 13, fontWeight: 700 }}>{msg.text}</div>}
-            <button onClick={handleNext} style={B.btn}>PROCEED TO PAY →</button>
-            <div style={{ textAlign: 'center', marginTop: 12, fontSize: 11, color: '#8a9bb5' }}>💡 Deposit approve hone mein 15-30 min lagte hain</div>
+
+            {/* Custom amount */}
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>Custom Amount</div>
+            <div style={{ position: 'relative', marginBottom: 18 }}>
+              <div style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', fontSize: 20, fontWeight: 900, color: '#2a6dd9' }}>₹</div>
+              <input
+                style={{ width: '100%', background: '#f4f7fd', border: '2px solid #d0daea', borderRadius: 14, padding: '16px 18px 16px 40px', color: '#0d1f40', fontSize: 20, fontWeight: 900, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                type="number" placeholder="0" value={amount}
+                onChange={e => setAmount(e.target.value)}
+              />
+            </div>
+
+            {/* Min/Max info */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+              {[{ l: 'Min Deposit', v: '₹100' }, { l: 'Max Deposit', v: '₹1,00,000' }].map((x, i) => (
+                <div key={i} style={{ flex: 1, background: '#eef2f7', borderRadius: 12, padding: '10px 14px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: '#8a9bb5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{x.l}</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: '#0d1f40', marginTop: 2 }}>{x.v}</div>
+                </div>
+              ))}
+            </div>
+
+            {msg.text && (
+              <div style={{ background: msg.type === 'ok' ? '#e8f5e9' : '#fdecea', border: `1.5px solid ${msg.type === 'ok' ? '#a5d6a7' : '#f5c6cb'}`, borderRadius: 12, padding: '13px 16px', marginBottom: 18, color: msg.type === 'ok' ? '#1e8a3c' : '#c0392b', fontSize: 13, fontWeight: 700 }}>
+                {msg.text}
+              </div>
+            )}
+
+            <button onClick={handleNext}
+              style={{ width: '100%', background: 'linear-gradient(135deg,#1e4fa0,#2a6dd9)', color: '#fff', border: 'none', borderRadius: 16, padding: '17px', fontSize: 16, fontWeight: 900, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase', boxShadow: '0 8px 24px rgba(30,79,160,0.35)' }}>
+              PROCEED TO PAY →
+            </button>
+            <div style={{ textAlign: 'center', marginTop: 14, fontSize: 12, color: '#8a9bb5', fontWeight: 600 }}>
+              ⏰ Approval time: 15–30 minutes
+            </div>
           </div>
         )}
 
         {/* ── STEP 2: Pay ── */}
         {step === 2 && (
-          <div style={{ padding: '0 20px' }}>
+          <div style={{ padding: '0 22px' }}>
 
-            {/* Amount Banner */}
-            <div style={{ background: 'linear-gradient(135deg,#1a3a6e,#2a6dd9)', borderRadius: 16, padding: '16px', textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Pay Amount</div>
-              <div style={{ color: '#fff', fontSize: 36, fontWeight: 900 }}>₹{parseFloat(amount).toLocaleString('en-IN')}</div>
+            {/* Amount banner */}
+            <div style={{ background: 'linear-gradient(135deg,#1a3a6e,#2a6dd9)', borderRadius: 18, padding: '20px', textAlign: 'center', marginBottom: 22 }}>
+              <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4, fontWeight: 700 }}>Pay Amount</div>
+              <div style={{ color: '#fff', fontSize: 40, fontWeight: 900, letterSpacing: -1 }}>₹{parseFloat(amount).toLocaleString('en-IN')}</div>
             </div>
 
             {/* QR Code */}
             {qrUrl && (
-              <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ background: '#fff', border: '2px solid #e2e9f4', borderRadius: 20, display: 'inline-block', padding: 14, boxShadow: '0 4px 20px rgba(26,58,110,0.12)' }}>
-                  <img src={qrUrl} alt="UPI QR" style={{ width: 190, height: 190, display: 'block' }} />
+              <div style={{ textAlign: 'center', marginBottom: 22 }}>
+                <div style={{ background: '#fff', border: '2px solid #e2e9f4', borderRadius: 22, display: 'inline-block', padding: 16, boxShadow: '0 6px 24px rgba(26,58,110,0.13)' }}>
+                  <img src={qrUrl} alt="UPI QR" style={{ width: 210, height: 210, display: 'block' }} />
                 </div>
-                <div style={{ marginTop: 10, fontSize: 12, color: '#8a9bb5', fontWeight: 600 }}>Scan karo aur pay karo</div>
+                <div style={{ marginTop: 10, fontSize: 12, color: '#8a9bb5', fontWeight: 600 }}>📷 Scan karo → Pay karo</div>
               </div>
             )}
 
-            {/* UPI ID Copy Box */}
+            {/* UPI ID */}
             {upiId && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 }}>UPI ID</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f4f7fd', border: '2px solid #d0daea', borderRadius: 14, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f4f7fd', border: '2px solid #d0daea', borderRadius: 16, padding: '14px 16px' }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: '#8a9bb5', fontWeight: 600, marginBottom: 2 }}>Pay to</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: '#0d1f40', letterSpacing: 0.5 }}>{upiId}</div>
+                    <div style={{ fontSize: 12, color: '#8a9bb5', fontWeight: 600, marginBottom: 3 }}>Pay to</div>
+                    <div style={{ fontSize: 17, fontWeight: 900, color: '#0d1f40', letterSpacing: 0.3 }}>{upiId}</div>
                   </div>
-                  <button
-                    onClick={copyUpi}
-                    style={{
-                      padding: '10px 16px',
-                      background: upiCopied ? 'linear-gradient(135deg,#1e8a3c,#27ae60)' : 'linear-gradient(135deg,#1e4fa0,#2a6dd9)',
-                      border: 'none',
-                      borderRadius: 10,
-                      color: '#fff',
-                      fontWeight: 800,
-                      fontSize: 13,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s',
-                      boxShadow: upiCopied ? '0 4px 12px rgba(30,138,60,0.3)' : '0 4px 12px rgba(30,79,160,0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                  >
+                  <button onClick={copyUpi}
+                    style={{ padding: '11px 18px', background: upiCopied ? 'linear-gradient(135deg,#1e8a3c,#27ae60)' : 'linear-gradient(135deg,#1e4fa0,#2a6dd9)', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(30,79,160,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}>
                     {upiCopied ? '✅ Copied!' : '📋 Copy'}
                   </button>
-                </div>
-                <div style={{ marginTop: 10, background: '#eef2f7', borderRadius: 12, padding: '10px 14px', fontSize: 12, color: '#2a6dd9', fontWeight: 700 }}>
-                  💡 UPI ID copy karo → GPay / PhonePe / Paytm mein paste karo → ₹{parseFloat(amount).toLocaleString('en-IN')} pay karo
                 </div>
               </div>
             )}
 
             {/* Steps */}
-            <div style={{ background: '#fff', border: '1.5px solid #e2e9f4', borderRadius: 14, padding: '14px 16px', marginBottom: 20, boxShadow: '0 2px 8px rgba(26,58,110,0.06)' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12 }}>Payment Steps</div>
+            <div style={{ background: '#f4f7fd', borderRadius: 16, padding: '16px 18px', marginBottom: 20, border: '1.5px solid #e2e9f4' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14 }}>📋 Payment Steps</div>
               {[
                 { n: '1', t: 'QR scan karo ya UPI ID copy karo' },
                 { n: '2', t: `₹${parseFloat(amount).toLocaleString('en-IN')} pay karo apne UPI app se` },
                 { n: '3', t: 'Transaction Number / UTR note karo' },
                 { n: '4', t: 'Neeche UTR daalo aur submit karo' },
+                { n: '5', t: 'WhatsApp par admin ko screenshot bhejo', highlight: true },
               ].map((s, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: i < 3 ? 10 : 0 }}>
-                  <div style={{ width: 26, height: 26, background: 'linear-gradient(135deg,#1e4fa0,#2a6dd9)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12, flexShrink: 0 }}>{s.n}</div>
-                  <div style={{ fontSize: 13, color: '#0d1f40', fontWeight: 600 }}>{s.t}</div>
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: i < 4 ? 12 : 0, padding: s.highlight ? '10px 12px' : '0', background: s.highlight ? 'rgba(37,211,102,0.1)' : 'transparent', borderRadius: s.highlight ? 12 : 0, border: s.highlight ? '1.5px solid rgba(37,211,102,0.3)' : 'none' }}>
+                  <div style={{ width: 26, height: 26, background: s.highlight ? 'linear-gradient(135deg,#25D366,#128C7E)' : 'linear-gradient(135deg,#1e4fa0,#2a6dd9)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 12, flexShrink: 0 }}>{s.n}</div>
+                  <div style={{ fontSize: 13, color: s.highlight ? '#128C7E' : '#0d1f40', fontWeight: s.highlight ? 800 : 600, paddingTop: 3 }}>{s.t}</div>
                 </div>
               ))}
             </div>
 
-            {/* UTR Input */}
-            <label style={B.label}>Transaction Number / UTR</label>
-            <input style={B.input} placeholder="12-digit transaction number" value={utr} onChange={e => setUtr(e.target.value)} maxLength={20} />
+            {/* ✅ WhatsApp Button */}
+            <button onClick={openWhatsApp}
+              style={{ width: '100%', background: 'linear-gradient(135deg,#25D366,#128C7E)', color: '#fff', border: 'none', borderRadius: 16, padding: '16px', fontSize: 15, fontWeight: 900, cursor: 'pointer', letterSpacing: 0.5, boxShadow: '0 8px 24px rgba(37,211,102,0.35)', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>💬</span>
+              WHATSAPP PAR ADMIN KO BHEJO
+            </button>
 
-            <div style={{ background: '#eef2f7', borderRadius: 12, padding: '12px 14px', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 12, color: '#1e8a3c', fontWeight: 700 }}>✅ Pay karke Transaction No / UTR daalo</div>
-              <div style={{ fontSize: 12, color: '#e74c3c', fontWeight: 700 }}>⏰ Credit within 30 minutes</div>
+            {/* UTR Input */}
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>Transaction Number / UTR *</div>
+            <input
+              style={{ width: '100%', background: '#f4f7fd', border: '2px solid #d0daea', borderRadius: 14, padding: '15px 16px', color: '#0d1f40', fontSize: 15, fontWeight: 700, outline: 'none', marginBottom: 16, boxSizing: 'border-box', fontFamily: 'inherit' }}
+              placeholder="12-digit transaction number" value={utr}
+              onChange={e => setUtr(e.target.value)} maxLength={20}
+            />
+
+            {/* Info strip */}
+            <div style={{ background: '#eef2f7', borderRadius: 12, padding: '12px 14px', marginBottom: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ fontSize: 12, color: '#1e8a3c', fontWeight: 700 }}>✅ Pay karke UTR daalo aur submit karo</div>
+              <div style={{ fontSize: 12, color: '#e74c3c', fontWeight: 700 }}>⏰ Approval: 15–30 minutes</div>
+              <div style={{ fontSize: 12, color: '#128C7E', fontWeight: 700 }}>💬 Fast approval ke liye WhatsApp par screenshot bhejo</div>
             </div>
 
-            {msg.text && <div style={{ background: msg.type === 'ok' ? '#e8f5e9' : '#fdecea', border: `1px solid ${msg.type === 'ok' ? '#a5d6a7' : '#f5c6cb'}`, borderRadius: 10, padding: '12px', marginBottom: 16, color: msg.type === 'ok' ? '#1e8a3c' : '#c0392b', fontSize: 13, fontWeight: 700 }}>{msg.text}</div>}
+            {msg.text && (
+              <div style={{ background: msg.type === 'ok' ? '#e8f5e9' : '#fdecea', border: `1.5px solid ${msg.type === 'ok' ? '#a5d6a7' : '#f5c6cb'}`, borderRadius: 12, padding: '13px 16px', marginBottom: 18, color: msg.type === 'ok' ? '#1e8a3c' : '#c0392b', fontSize: 13, fontWeight: 700 }}>
+                {msg.text}
+              </div>
+            )}
 
-            <button onClick={handleSubmitUTR} disabled={loading} style={{ ...B.btn, opacity: loading ? 0.6 : 1 }}>{loading ? '⏳ Submitting...' : '✅ SUBMIT UTR'}</button>
-            <button onClick={() => { setStep(1); setMsg({ type: '', text: '' }); }} style={{ width: '100%', marginTop: 10, padding: '14px', background: 'transparent', border: '1.5px solid #d0daea', borderRadius: 14, color: '#8a9bb5', fontWeight: 800, cursor: 'pointer', fontSize: 14 }}>← Change Amount</button>
+            <button onClick={handleSubmitUTR} disabled={loading}
+              style={{ width: '100%', background: loading ? '#ccc' : 'linear-gradient(135deg,#1e4fa0,#2a6dd9)', color: '#fff', border: 'none', borderRadius: 16, padding: '17px', fontSize: 16, fontWeight: 900, cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: 1, textTransform: 'uppercase', boxShadow: loading ? 'none' : '0 8px 24px rgba(30,79,160,0.35)', marginBottom: 12 }}>
+              {loading ? '⏳ Submitting...' : '✅ SUBMIT UTR'}
+            </button>
+
+            <button onClick={() => { setStep(1); setMsg({ type: '', text: '' }); }}
+              style={{ width: '100%', padding: '14px', background: 'transparent', border: '2px solid #e2e9f4', borderRadius: 14, color: '#8a9bb5', fontWeight: 800, cursor: 'pointer', fontSize: 14 }}>
+              ← Amount Change Karo
+            </button>
           </div>
         )}
       </div>
     </div>
   );
 }
-
 // ── MY BIDS PAGE ──
 export function BidsPage({ apiCall }) {
   const [bids, setBids] = useState([]);
