@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Browser } from '@capacitor/browser';
+
 
 // ── BLUE THEME SHARED STYLES ──
 const B = {
