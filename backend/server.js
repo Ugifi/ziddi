@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const cron = require('node-cron'); // ✅ Node Cron Added
 require('dotenv').config();
 
 const db = require('./config/db');
@@ -12,8 +13,8 @@ const authRoutes    = require('./routes/auth');
 const gamesRoutes   = require('./routes/games');
 const walletRoutes  = require('./routes/wallet');
 const adminRoutes   = require('./routes/admin');
-const scraperRoutes = require('./routes/scraper'); // ✅ NEW
-require('./scheduler');
+const scraperRoutes = require('./routes/scraper');
+const { syncResults } = require('./routes/scraper'); // ✅ Scraper Function Import
 
 const app = express();
 
@@ -45,7 +46,7 @@ app.use('/api/auth',    authLimiter, authRoutes);
 app.use('/api/games',   gamesRoutes);
 app.use('/api/wallet',  walletRoutes);
 app.use('/api/admin',   adminRoutes);
-app.use('/api/scraper', scraperRoutes); // ✅ NEW
+app.use('/api/scraper', scraperRoutes);
 
 app.get('/', (req, res) => {
   res.json({
@@ -93,6 +94,21 @@ app.get('/create-admin', async (req, res) => {
   }
 });
 
+// ─── CRON JOB: Auto Scraper Scheduler ────────────────────────────────
+// Ye har 1 minute mein dpbossss.boston se data fetch karega aur DB update karega
+cron.schedule('* * * * *', async () => {
+  // console.log('⏳ [Cron] Running Auto Scraper...'); // Uncomment for debugging
+  try {
+    const res = await syncResults();
+    if (res.updated > 0) {
+      console.log(`✅ [Cron] Scraper Update: ${res.message}`);
+    }
+  } catch (err) {
+    console.error('❌ [Cron] Scraper Error:', err.message);
+  }
+});
+// ─────────────────────────────────────────────────────────────────────
+
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
@@ -106,7 +122,8 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`\n🎯 MatkaKing Backend Running on Port ${PORT}`);
   console.log(`📡 API: http://localhost:${PORT}`);
-  console.log(`🔧 Admin Setup: http://localhost:${PORT}/create-admin\n`);
+  console.log(`🔧 Admin Setup: http://localhost:${PORT}/create-admin`);
+  console.log(`⏳ Auto Scraper Started (Runs every 1 minute)\n`);
 });
 
 module.exports = app;
