@@ -133,12 +133,12 @@ router.get('/sync', async (req, res) => {
 
 // ── PAYOUT MAP ────────────────────────────────────────────────────────────────
 const PAYOUTS = {
-  'single_digit': 9, 'single_digit_bulk': 9, 'red_bracket': 9, 'common_digit': 9, 'gunule': 9,
-  'jodi': 90, 'jodi_bulk': 90, 'red_jodi': 90, 'cycle_jodi': 90, 'digit_jodi': 90,
+  'single_digit': 9.5, 'single_digit_bulk': 9.5, 'red_bracket': 9.5, 'common_digit': 9.5, 'gunule': 9.5,
+  'jodi': 95, 'jodi_bulk': 95, 'red_jodi': 95, 'cycle_jodi': 95, 'digit_jodi': 95, 'family_jodi': 95,
   'single_pana': 150, 'single_pana_bulk': 150, 'sp_motor': 150, 'sp_common': 150, 'panel_group': 150, 'cycle_pana': 150,
   'double_pana': 300, 'double_pana_bulk': 300, 'dp_motor': 300, 'dp_common': 300,
-  'triple_pana': 600, 'tp_motor': 600, 'jackpot': 9000,
-  'half_sangam_a': 1500, 'half_sangam_b': 1500,
+  'triple_pana': 700, 'tp_motor': 700, 'jackpot': 9000,
+  'half_sangam_a': 1000, 'half_sangam_b': 1000,
   'full_sangam': 10000, 'choice_sangam': 10000,
   'odd_even': 2, 'two_digit_pana': 300
 };
