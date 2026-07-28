@@ -132,6 +132,75 @@ router.get('/sync', async (req, res) => {
   }
 });
 
+// ── BID SETTLEMENT LOGIC (Result aane par user ko payment do) ───────────────
+async function settleGameBids(gameId, openRes, closeRes) {
+  try {
+    const [bids] = await db.query('SELECT * FROM bids WHERE game_id = ? AND status = "pending"', [gameId]);
+    if (!bids.length) return;
+
+    let openDigit = null, closeDigit = null, jodi = null;
+    if (openRes) openDigit = String(openRes).split('').reduce((s, d) => s + parseInt(d), 0) % 10;
+    if (closeRes) closeDigit = String(closeRes).split('').reduce((s, d) => s + parseInt(d), 0) % 10;
+    if (openDigit !== null && closeDigit !== null) jodi = `${openDigit}${closeDigit}`;
+
+    for (const bid of bids) {
+      let isWin = false;
+      const num = String(bid.number).trim();
+      const type = bid.game_type;
+
+      if (bid.session === 'open' && openRes) {
+        if (type.includes('digit') && !type.includes('jodi') && !type.includes('sangam') && !type.includes('bulk')) {
+          if (num == openDigit) isWin = true;
+        } else if (type.includes('pana') || type.includes('motor') || type.includes('jackpot') || type.includes('common') || type.includes('group')) {
+          if (num == openRes) isWin = true;
+        }
+      } 
+      else if (bid.session === 'close' && closeRes) {
+        if (type.includes('digit') && !type.includes('jodi') && !type.includes('sangam') && !type.includes('bulk')) {
+          if (num == closeDigit) isWin = true;
+        } else if (type.includes('pana') || type.includes('motor') || type.includes('jackpot') || type.includes('common') || type.includes('group')) {
+          if (num == closeRes) isWin = true;
+        }
+      }
+
+      if (type.includes('jodi') && jodi) {
+        if (num == jodi) isWin = true;
+      }
+      if (type === 'half_sangam_a' && openRes && closeDigit !== null) {
+        if (num == `${openRes}${closeDigit}`) isWin = true;
+      }
+      if (type === 'half_sangam_b' && openDigit !== null && closeRes) {
+        if (num == `${openDigit}${closeRes}`) isWin = true;
+      }
+      if ((type === 'full_sangam' || type.includes('sangam')) && openRes && closeRes) {
+        if (num == `${openRes}${closeRes}`) isWin = true;
+      }
+
+      if (isWin) {
+        const winAmt = parseFloat(bid.potential_winning);
+        await db.query('UPDATE bids SET status = "win", win_amount = ? WHERE id = ?', [winAmt, bid.id]);
+        await db.query('UPDATE users SET winning_balance = winning_balance + ? WHERE id = ?', [winAmt, bid.user_id]);
+        await db.query(
+          `INSERT INTO transactions (user_id, type, wallet_type, amount, description, reference_id, status) VALUES (?, 'credit', 'winning', ?, ?, ?, 'completed')`,
+          [bid.user_id, winAmt, `Win: Game ID ${gameId} | ${type} | ${num}`, bid.id]
+        );
+      } else {
+        let canMarkLoss = false;
+        if (bid.session === 'open' && openRes) canMarkLoss = true;
+        if (bid.session === 'close' && closeRes) canMarkLoss = true;
+        if (type.includes('jodi') && jodi) canMarkLoss = true;
+        if (type.includes('sangam') && openRes && closeRes) canMarkLoss = true;
+
+        if (canMarkLoss) {
+          await db.query('UPDATE bids SET status = "loss" WHERE id = ?', [bid.id]);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Settle Bids Error:', err.message);
+  }
+}
+
 // ── MAIN SYNC FUNCTION ───────────────────────────────────────────────────────
 async function syncResults() {
   const games = await scrapeAllGames();
@@ -211,6 +280,14 @@ async function syncResults() {
         [item.close_result, item.jodi_result, dbGame.id]
       );
     }
+
+    // ✅ YAHAN BID SETTLE FUNCTION CALL HOGA
+    // Result update hote hi turant users ke bids check honge aur payment milegi
+    await settleGameBids(
+      dbGame.id, 
+      item.open_result || dbGame.open_result, 
+      item.close_result || dbGame.close_result
+    );
 
     updated++;
     log.push({ game: dbGame.name, result: item.result });
