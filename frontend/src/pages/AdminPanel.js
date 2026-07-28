@@ -122,7 +122,6 @@ const B = {
 
 // ── TIME PICKER WITH AM/PM ─────────────────────────────────────
 function TimePicker({ value, onChange, placeholder }) {
-  // value format: "HH:MM" 24hr internally, display with AM/PM
   const parseTime = (val) => {
     if (!val) return { hh: '', mm: '', ampm: 'AM' };
     const [h, m] = val.split(':');
@@ -176,7 +175,6 @@ function TimePicker({ value, onChange, placeholder }) {
   );
 }
 
-// Display 24hr → 12hr AM/PM
 function displayTime(val) {
   if (!val) return '--';
   const [h, m] = val.split(':');
@@ -253,8 +251,72 @@ function EditGameModal({ game, onClose, onSave }) {
   );
 }
 
+// ── CHANGE MOBILE MODAL ────────────────────────────────────────
+function ChangeMobileModal({ user, onClose, onSave }) {
+  const [mobile, setMobile] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!mobile || mobile.length !== 10) { alert('Valid 10-digit mobile number daalo!'); return; }
+    setSaving(true);
+    const res = await apiCall(`/api/admin/users/${user.id}/change-mobile`, 'PUT', { mobile });
+    setSaving(false);
+    if (res.success) { onSave(mobile); onClose(); }
+    else alert('Error: ' + (res.message || 'Update failed'));
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 17, fontWeight: 900, color: C.textMain }}>📱 Change Mobile</div>
+          <button onClick={onClose} style={{ background: C.dangerBg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.danger, fontSize: 16, fontWeight: 900 }}>✕</button>
+        </div>
+
+        {/* Current number display */}
+        <div style={{ background: C.inputBg, border: `1.5px solid ${C.inputBdr}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: C.textSub, fontWeight: 700, lineHeight: 1.8 }}>
+          👤 <strong style={{ color: C.textMain }}>{user.name}</strong><br />
+          <span style={{ color: C.textMuted, fontSize: 12 }}>Current Number: </span>
+          <strong style={{ color: C.primary }}>{user.mobile}</strong>
+        </div>
+
+        <label style={B.label}>New Mobile Number</label>
+        <input
+          style={B.input}
+          type="tel"
+          placeholder="10-digit mobile number"
+          maxLength={10}
+          value={mobile}
+          onChange={e => setMobile(e.target.value.replace(/\D/g, ''))}
+          onKeyDown={e => e.key === 'Enter' && save()}
+        />
+
+        {mobile.length > 0 && mobile.length < 10 && (
+          <div style={{ color: C.warn, fontSize: 12, fontWeight: 700, marginTop: -8, marginBottom: 10 }}>
+            ⚠️ {10 - mobile.length} digit aur chahiye
+          </div>
+        )}
+
+        {mobile.length === 10 && (
+          <div style={{ color: C.success, fontSize: 12, fontWeight: 700, marginTop: -8, marginBottom: 10 }}>
+            ✅ Number valid hai
+          </div>
+        )}
+
+        <button
+          onClick={save}
+          disabled={saving || mobile.length !== 10}
+          style={{ ...B.btn, marginTop: 8, opacity: (saving || mobile.length !== 10) ? 0.55 : 1 }}
+        >
+          {saving ? '⏳ UPDATING...' : '💾 UPDATE MOBILE'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── USER CARD ────────────────────────────────────────────────
-function UserCard({ u, onBlock, onAddCoins, onDeductCoins }) {
+function UserCard({ u, onBlock, onAddCoins, onDeductCoins, onChangeMobile }) {
   return (
     <div style={B.card}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
@@ -275,12 +337,19 @@ function UserCard({ u, onBlock, onAddCoins, onDeductCoins }) {
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      {/* Row 1: Block / Add / Deduct */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <ActionBtn onClick={() => onBlock(u.id, u.is_blocked)} color={u.is_blocked ? C.success : C.warn} bg={u.is_blocked ? C.successBg : C.warnBg}>
           {u.is_blocked ? '✅ Unblock' : '🚫 Block'}
         </ActionBtn>
         <ActionBtn onClick={() => onAddCoins(u.id)} color={C.success} bg={C.successBg}>+ Coins</ActionBtn>
         <ActionBtn onClick={() => onDeductCoins(u.id)} color={C.danger} bg={C.dangerBg}>- Coins</ActionBtn>
+      </div>
+      {/* Row 2: Change Mobile */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <ActionBtn onClick={() => onChangeMobile(u)} color={C.primary} bg={C.badgePend}>
+          📱 Change Mobile
+        </ActionBtn>
       </div>
     </div>
   );
@@ -432,11 +501,12 @@ export default function AdminPanel({ onLogout }) {
   const [lastRefresh, setLastRefresh] = useState(null);
   const [editingGame, setEditingGame] = useState(null);
 
+  // ── Change Mobile Modal state ──────────────────────────────
+  const [changeMobileUser, setChangeMobileUser] = useState(null);
+
   // ── FIX: Refresh pe logout nahi hoga ──────────────────────────
-  // Admin login state sessionStorage mein rakho
   const [adminReady, setAdminReady] = useState(false);
   useEffect(() => {
-    // Token hai toh admin already logged in hai, verify karo
     const token = localStorage.getItem('mk_token');
     if (token) {
       apiCall('/api/auth/profile').then(res => {
@@ -447,7 +517,7 @@ export default function AdminPanel({ onLogout }) {
           localStorage.removeItem('mk_admin_user');
           onLogout();
         }
-      }).catch(() => setAdminReady(true)); // network error pe bhi andar rehne do
+      }).catch(() => setAdminReady(true));
     } else {
       onLogout();
     }
@@ -568,6 +638,11 @@ export default function AdminPanel({ onLogout }) {
     if (res.success) { showToast('Coins deducted ✅'); fetchPageData('users', false); } else showToast('Error: ' + res.message);
   };
 
+  // ── CHANGE MOBILE HANDLER ──────────────────────────────────
+  const handleChangeMobile = (user) => {
+    setChangeMobileUser(user);
+  };
+
   // ── GAME ACTIONS ──
   const addGame = async () => {
     if (!newGame.name || !newGame.open_time || !newGame.close_time) { showToast('Saari details bhariye!'); return; }
@@ -681,6 +756,19 @@ export default function AdminPanel({ onLogout }) {
         />
       )}
 
+      {/* Change Mobile Modal */}
+      {changeMobileUser && (
+        <ChangeMobileModal
+          user={changeMobileUser}
+          onClose={() => setChangeMobileUser(null)}
+          onSave={(newMobile) => {
+            setUsers(us => us.map(u => u.id === changeMobileUser.id ? { ...u, mobile: newMobile } : u));
+            showToast('📱 Mobile number update ho gaya ✅');
+            setChangeMobileUser(null);
+          }}
+        />
+      )}
+
       {/* NAVBAR */}
       <div style={{ background: C.navBg, height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', position: 'sticky', top: 0, zIndex: 200, boxShadow: '0 3px 20px rgba(13,27,94,0.35)', flexShrink: 0 }}>
         <button onClick={() => setDrawerOpen(true)} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, width: 42, height: 42, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, padding: 0 }}>
@@ -790,7 +878,16 @@ export default function AdminPanel({ onLogout }) {
           <div>
             {users.length === 0
               ? <div style={{ textAlign: 'center', color: C.textMuted, padding: 40, fontWeight: 700 }}>Koi user nahi mila</div>
-              : users.map(u => <UserCard key={u.id} u={u} onBlock={toggleBlock} onAddCoins={addCoins} onDeductCoins={deductCoins} />)}
+              : users.map(u => (
+                <UserCard
+                  key={u.id}
+                  u={u}
+                  onBlock={toggleBlock}
+                  onAddCoins={addCoins}
+                  onDeductCoins={deductCoins}
+                  onChangeMobile={handleChangeMobile}
+                />
+              ))}
           </div>
         )}
 
@@ -827,7 +924,6 @@ export default function AdminPanel({ onLogout }) {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        {/* EDIT BUTTON */}
                         <button onClick={() => setEditingGame(g)}
                           style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.badgePend, color: C.primary, fontSize: 11, fontWeight: 800 }}>
                           ✏️ Edit
