@@ -144,16 +144,15 @@ async function declareResult(game, openResult, closeResult) {
       if (isWinner) {
         const winAmount = parseFloat(bid.amount) * (GAME_PAYOUTS[bid.game_type] || 9);
         await conn.query('UPDATE users SET winning_balance=winning_balance+? WHERE id=?', [winAmount, bid.user_id]);
-        await conn.query("UPDATE bids SET status='won', win_amount=? WHERE id=?", [winAmount, bid.id]);
-        await conn.query(
+        await conn.query("UPDATE bids SET status='win', win_amount=? WHERE id=?", [winAmount, bid.id]);      
+          await conn.query(
           `INSERT INTO transactions (user_id,type,wallet_type,amount,description,reference_id,status)
            VALUES (?,'credit','winning_wallet',?,?,?,'completed')`,
           [bid.user_id, winAmount, `Auto Result: ${game.name} — ${jodiResult}`, bid.id]
         );
         winners++; totalPaid += winAmount;
       } else {
-        await conn.query("UPDATE bids SET status='lost' WHERE id=?", [bid.id]);
-      }
+        await conn.query("UPDATE bids SET status='loss' WHERE id=?", [bid.id]);      }
     }
 
     await conn.commit();
