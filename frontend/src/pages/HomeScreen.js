@@ -97,33 +97,49 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     fetchGames();
   }, []);
 
-  // ✅ FIXED: Open digit aur close digit auto-calculate karta hai
+  // ✅ 30 Second Delay Logic
+  const isTimePassed = (timeStr, delaySeconds = 30) => {
+    if (!timeStr) return false;
+    try {
+      const now = new Date();
+      const [h, m, s] = timeStr.split(':').map(Number);
+      const gameDate = new Date();
+      gameDate.setHours(h, m, s || 0, 0);
+      
+      const diff = (now.getTime() - gameDate.getTime()) / 1000;
+      return diff >= delaySeconds;
+    } catch { return false; }
+  };
+
+  // ✅ Result Format with 30 Sec Delay & Date Filter
   const formatResult = (g) => {
-    const open  = g.open_result  || '***';
-    const close = g.close_result || '***';
+    let openRes = g.open_result;
+    let closeRes = g.close_result;
+
+    // Agar open_time se 30 sec nahi beet gaye, toh open result mat dikhao
+    if (openRes && !isTimePassed(g.open_time, 30)) {
+      openRes = null;
+    }
+    // Agar close_time se 30 sec nahi beet gaye, toh close result mat dikhao
+    if (closeRes && !isTimePassed(g.close_time, 30)) {
+      closeRes = null;
+    }
+
+    const open  = openRes  || '***';
+    const close = closeRes || '***';
 
     let jodi = '**';
-    if (g.open_result) {
-      // Open digit = sum of open_result digits % 10  (e.g. 4+5+0 = 9)
-      const openDigit = String(g.open_result)
-        .split('')
-        .reduce((sum, d) => sum + parseInt(d, 10), 0) % 10;
-
-      if (g.close_result) {
-        // Close digit = sum of close_result digits % 10  (e.g. 4+5+6 = 15 → 5)
-        const closeDigit = String(g.close_result)
-          .split('')
-          .reduce((sum, d) => sum + parseInt(d, 10), 0) % 10;
-        jodi = `${openDigit}${closeDigit}`;           // e.g. "95"
+    if (openRes) {
+      const openDigit = String(openRes).split('').reduce((sum, d) => sum + parseInt(d, 10), 0) % 10;
+      if (closeRes) {
+        const closeDigit = String(closeRes).split('').reduce((sum, d) => sum + parseInt(d, 10), 0) % 10;
+        jodi = `${openDigit}${closeDigit}`;
       } else {
-        jodi = `${openDigit}*`;                        // e.g. "9*"
+        jodi = `${openDigit}*`;
       }
     }
 
     return `${open}-${jodi}-${close}`;
-    // Open only  → "450-9*-***"  ✅
-    // Both       → "450-95-679"  ✅
-    // None       → "***-**-***"  ✅
   };
 
   const isRunning = (g) => g.status === 'open';
@@ -278,7 +294,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         .hs-king-btn:active { transform:scale(0.96); }
         .hs-king-play { width:26px; height:26px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
         .hs-king-play-tri { width:0; height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:9px solid #fff; margin-left:2px; }
-        .hs-king-name { font-family:'Nunito',sans-serif; font-size:13px; font-weight:900; color:#fff; letter-spacing:0.3px; text-transform:uppercase; }
+        .hs-king-name { font-family:'Nunito',sans-serif; font-size:13px; font-weight:900; color:'#fff', letterSpacing:0.3px; text-transform:uppercase; }
 
         .hs-live-header { display:flex; align-items:center; gap:8px; padding:16px 14px 6px; }
         .hs-live-dot { width:9px; height:9px; border-radius:50%; background:#2a6dd9; animation:livePulse 1.4s ease-in-out infinite; flex-shrink:0; }
