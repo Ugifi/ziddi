@@ -365,7 +365,7 @@ router.get('/deposits', async (req, res) => {
 
     const [rows] = await db.query(
       `SELECT d.*, u.name, u.mobile,
-        DATE_FORMAT(CONVERT_TZ(d.created_at, '+00:00', '+05:30'), '%Y-%m-%d %H:%i:%s') as created_at
+        DATE_FORMAT(d.created_at, '%d/%m/%Y, %h:%i %p') as created_at
        FROM deposit_requests d
        JOIN users u ON d.user_id = u.id
        WHERE d.type = 'deposit' AND d.status = ?
@@ -480,7 +480,7 @@ router.get('/withdrawals', async (req, res) => {
     const status = req.query.status || 'pending';
     const [rows] = await db.query(
       `SELECT d.*, u.name, u.mobile,
-        DATE_FORMAT(CONVERT_TZ(d.created_at, '+00:00', '+05:30'), '%Y-%m-%d %H:%i:%s') as created_at
+        DATE_FORMAT(d.created_at, '%d/%m/%Y, %h:%i %p') as created_at
        FROM deposit_requests d
        JOIN users u ON d.user_id = u.id
        WHERE d.type = 'withdrawal' AND d.status = ?
@@ -551,8 +551,8 @@ router.get('/bids', async (req, res) => {
     const game_id = req.query.game_id || null;
 
     let query = `SELECT b.*, u.name, u.mobile, g.name as game_name,
-      DATE_FORMAT(CONVERT_TZ(b.created_at, '+00:00', '+05:30'), '%Y-%m-%d %H:%i:%s') as created_at
-      FROM bids b
+     DATE_FORMAT(d.created_at, '%d/%m/%Y, %h:%i %p') as created_at
+    FROM bids b
       JOIN users u ON b.user_id = u.id
       JOIN games g ON b.game_id = g.id WHERE 1=1`;
     const params = [];
