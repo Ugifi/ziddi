@@ -392,17 +392,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         </button>
       </div>
 
-      {/* MATKA STARLINE / MATKA JACKPOT */}
-      <div className="hs-king-row">
-        <button className="hs-king-btn" onClick={() => navigate && navigate('starline')}>
-          <div className="hs-king-play"><div className="hs-king-play-tri" /></div>
-          <span className="hs-king-name">Matka Starline</span>
-        </button>
-        <button className="hs-king-btn" onClick={() => setShowDisawar(true)}>
-          <div className="hs-king-play"><div className="hs-king-play-tri" /></div>
-          <span className="hs-king-name">Matka Jackpot</span>
-        </button>
-      </div>
+      
 
       {/* LIVE MARKETS */}
       <div className="hs-live-header">
