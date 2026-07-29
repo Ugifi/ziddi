@@ -5,6 +5,16 @@ const db = require('../config/db');
 const { authMiddleware } = require('../middleware/auth');
 require('dotenv').config();
 
+// ✅ 2 AM Reset Logic: Date 2 baje badlegi
+function getMatkaDate() {
+  const now = new Date();
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  if (ist.getUTCHours() < 2) {
+    ist.setUTCDate(ist.getUTCDate() - 1);
+  }
+  return ist.toISOString().split('T')[0];
+}
+
 // All game types with payout multipliers
 const GAME_TYPES = {
   'single_digit':      { name: 'Single Digit',       payout: 9.5,   min_digits: 1, max_digits: 1 },
@@ -41,19 +51,21 @@ const GAME_TYPES = {
   'double_pana_bulk':  { name: 'Double Pana Bulk',   payout: 300,   min_digits: 3, max_digits: 3 },
   'two_digit_pana':    { name: 'Two Digit Pana',     payout: 300,   min_digits: 3, max_digits: 3 }
 };
-// ─── GET ALL GAMES (with optional category filter & 12AM Reset Logic) ────────
+
+// ─── GET ALL GAMES (with optional category filter & 2AM Reset Logic) ────────
 router.get('/', async (req, res) => {
   try {
     const category = req.query.category || null;
 
-    // Sirf aaj ki date ka result dikhana (12 AM Reset Logic)
+    // Sirf aaj ki date ka result dikhana (2 AM Reset Logic)
+    const matkaDate = getMatkaDate();
     let query = `SELECT id, name, game_category, open_time, close_time, result_time, status,
-                        CASE WHEN result_date = CURDATE() THEN open_result ELSE NULL END as open_result,
-                        CASE WHEN result_date = CURDATE() THEN close_result ELSE NULL END as close_result,
-                        CASE WHEN result_date = CURDATE() THEN jodi_result ELSE NULL END as jodi_result,
+                        CASE WHEN result_date = ? THEN open_result ELSE NULL END as open_result,
+                        CASE WHEN result_date = ? THEN close_result ELSE NULL END as close_result,
+                        CASE WHEN result_date = ? THEN jodi_result ELSE NULL END as jodi_result,
                         min_bid, max_bid, created_at
                  FROM games WHERE status != 'deleted'`;
-    const params = [];
+    const params = [matkaDate, matkaDate, matkaDate];
 
     if (category) {
       query += ' AND game_category = ?';
@@ -139,8 +151,13 @@ router.post('/bid', authMiddleware, [
     }
     // ──────────────────────────────────────────────────────────────────────────
 
-    const openDeclared  = !!game.open_result;
-    const closeDeclared = !!game.close_result;
+    // ✅ 2 AM DATE CHECK & TIME CHECK
+    const matkaDate = getMatkaDate();
+    const isTodayResult = game.result_date === matkaDate;
+    
+    // Agar DB mein result pada hai, par time nahi hua, toh usko declared nahi manna
+    const openDeclared  = isTodayResult && !!game.open_result && currentTime >= game.open_time;
+    const closeDeclared = isTodayResult && !!game.close_result && currentTime >= game.close_time;
 
     // State 3: dono result aa gaye → band
     if (openDeclared && closeDeclared) {
