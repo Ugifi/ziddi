@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+
 // ── BLUE THEME SHARED STYLES ──
 const B = {
   page:      { background: '#eef2f7', minHeight: '100vh', paddingBottom: 80, color: '#222', fontFamily: '"Nunito", "Segoe UI", sans-serif' },
@@ -94,11 +95,12 @@ export function DepositModal({ onClose, apiCall, onSuccess }) {
     if (!utr || utr.trim().length < 6) { setMsg({ type: 'err', text: '❌ Valid Transaction Number / UTR daalo' }); return; }
     setLoading(true); setMsg({ type: '', text: '' });
     try {
-      const res = await apiCall('/api/wallet/deposit', 'POST', {
-        amount: parseFloat(amount),
-        transaction_id: utr.trim(),
-        payment_method: 'upi'
-      });
+     // NAYA — SAHI
+const res = await apiCall('/api/wallet/deposit', 'POST', {
+  amount: parseFloat(amount),
+  utr: utr.trim(),              // ← 'transaction_id' → 'utr' kar diya
+  payment_method: 'upi'
+});
       if (res?.success) {
         setMsg({ type: 'ok', text: '✅ Request submit ho gayi! Admin 15-30 min mein approve karega.' });
         setTimeout(() => { onSuccess && onSuccess(); onClose(); }, 2500);
