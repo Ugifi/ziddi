@@ -10,15 +10,16 @@ function toIST(dateStr) {
   if (!dateStr) return '';
   try {
     let str = String(dateStr);
+    // MySQL datetime "2026-07-29 10:33:00" → UTC treat karo
     if (!str.includes('T') && str.includes(' ')) {
-      str = str.replace(' ', 'T'); // ← 'Z' hata diya
+      str = str.replace(' ', 'T') + 'Z';
     }
     const d = new Date(str);
     if (isNaN(d.getTime())) return '';
     return d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit', hour12: true
-      // ← timeZone hata diya
     });
   } catch (e) { return ''; }
 }
@@ -384,6 +385,17 @@ function UserCard({ u, onBlock, onAddCoins, onDeductCoins, onChangeMobile, onLog
 
 // ─── DEPOSIT CARD ─────────────────────────────────────────────
 function DepositCard({ d, onApprove, onReject }) {
+  const [utrCopied, setUtrCopied] = React.useState(false);
+  const utrValue = d.utr_number || d.utr || d.transaction_id || '';
+
+  const copyUtr = () => {
+    if (!utrValue) return;
+    navigator.clipboard.writeText(utrValue).then(() => {
+      setUtrCopied(true);
+      setTimeout(() => setUtrCopied(false), 2000);
+    });
+  };
+
   return (
     <div style={B.card}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
@@ -393,13 +405,24 @@ function DepositCard({ d, onApprove, onReject }) {
         </div>
         <div style={{ fontWeight: 900, fontSize: 20, color: C.success }}>₹{Number(d.amount).toLocaleString()}</div>
       </div>
-      {(d.utr_number || d.transaction_id) && (
-        <div style={{ background: C.inputBg, border: `1.5px solid ${C.inputBdr}`, borderRadius: 8, padding: '8px 12px', marginBottom: 8, fontSize: 13, color: C.textSub }}>
-          UTR/Ref No: <strong style={{ color: C.textMain }}>{d.utr_number || d.transaction_id}</strong>
+
+      {utrValue && (
+        <div style={{ background: C.inputBg, border: `1.5px solid ${C.inputBdr}`, borderRadius: 10, padding: '10px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>UTR / Ref No</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: C.textMain }}>{utrValue}</div>
+          </div>
+          <button onClick={copyUtr} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 12, background: utrCopied ? C.successBg : C.badgePend, color: utrCopied ? C.success : C.primary, whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
+            {utrCopied ? '✅ Copied!' : '📋 Copy'}
+          </button>
         </div>
       )}
-      {d.upi_id && <div style={{ fontSize: 13, color: C.textSub, marginBottom: 8, fontWeight: 600 }}>UPI Ref: {d.upi_id}</div>}
+
+      {d.upi_id && (
+        <div style={{ fontSize: 13, color: C.textSub, marginBottom: 8, fontWeight: 600 }}>UPI Ref: {d.upi_id}</div>
+      )}
       <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, fontWeight: 600 }}>📅 {toIST(d.created_at)}</div>
+
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <StatusBadge status={d.status} />
         {d.status === 'pending' && <>
