@@ -166,7 +166,13 @@ router.put('/games/:id/hide', async (req, res) => {
 });
 
 router.delete('/games/:id', async (req, res) => {
-  try { await db.query('DELETE FROM games WHERE id = ?', [req.params.id]); res.json({ success: true, message: 'Game deleted successfully' }); } catch (err) { res.status(500).json({ success: false, message: 'Server error' }); }
+  try {
+    await db.query('UPDATE games SET status = "deleted", is_hidden = 1 WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Game deleted successfully' });
+  } catch (err) {
+    console.error('Delete game error:', err);
+    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+  }
 });
 
 // ─── DECLARE RESULT ───────────────────────────────────────────────────────────
