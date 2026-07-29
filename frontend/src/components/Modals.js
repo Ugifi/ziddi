@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API = 'https://ziddi-1-we11.onrender.com';
 
 // ────────────────────────────────────────────────
 //  ADD MONEY MODAL
