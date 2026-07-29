@@ -48,25 +48,27 @@ router.get('/balance', authMiddleware, async (req, res) => {
 });
 
 // ─── DEPOSIT REQUEST ──────────────────────────────────────────────────────────
-router.post('/deposit', authMiddleware, upload.single('payment_proof'), [
+const uploadOptional = (req, res, next) => {
+  upload.single('payment_proof')(req, res, (err) => { next(); });
+};
+
+router.post('/deposit', authMiddleware, uploadOptional, [
   body('amount').isFloat({ min: 1 }).withMessage('Valid amount required')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    if (req.file) fs.unlinkSync(req.file.path);
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
   const amount = parseFloat(req.body.amount);
+  const utr = req.body.utr || req.body.transaction_id || req.body.utr_number || null;
   const minDeposit = parseFloat(process.env.MIN_DEPOSIT || 100);
 
   if (amount < minDeposit) {
-    if (req.file) fs.unlinkSync(req.file.path);
     return res.status(400).json({ success: false, message: `Minimum deposit ₹${minDeposit}` });
   }
 
   const payment_proof = req.file ? req.file.filename : null;
-  const utr = req.body.utr || null;
 
   try {
     // Get payment settings
