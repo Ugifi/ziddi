@@ -560,11 +560,16 @@ export default function App() {
     finally { bidSubmittingRef.current = false; }
   };
 
-  const navigate = id => {
-    setPage(id);
-    const validTabs = ['home','bids','disawar','jackpot','wallet','profile','game','txns','support','referral'];
-    if (validTabs.includes(id)) setTab(id);
-  };
+ // NAYA — scroll reset add kiya
+const navigate = id => {
+  setPage(id);
+  const validTabs = ['home','bids','disawar','jackpot','wallet','profile','game','txns','support','referral'];
+  if (validTabs.includes(id)) setTab(id);
+  // ✅ Top pe scroll karo
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+};
 
   const handleNav = id => {
     fetchWallet();
@@ -656,7 +661,13 @@ export default function App() {
       </div>
 
       {/* PAGES */}
-      {page === 'home'       && <HomeScreen wallet={wallet} onAdd={() => setModal('add')} onWith={() => setModal('with')} onPlay={g => { setSelectedGame(g); setPage('game-types'); setTab('game'); }} navigate={navigate} apiCall={apiCall} />}
+      {page === 'home'       && <HomeScreen wallet={wallet} onAdd={() => setModal('add')} onWith={() => setModal('with')} onPlay={g => { 
+  setSelectedGame(g); 
+  setPage('game-types'); 
+  setTab('game');
+  window.scrollTo(0, 0);          // ✅ ADD KARO
+  document.documentElement.scrollTop = 0;  // ✅ ADD KARO
+}} navigate={navigate} apiCall={apiCall} />}
       {page === 'profile'    && <ProfileScreen user={user} showToast={showToast} />}
       {page === 'game-types' && <GameTypePage game={selectedGame} onSelect={gt => { setSelectedType(gt); setPage('bet-form'); }} />}
       {page === 'bet-form'   && <BetForm game={selectedGame} gameType={selectedType} wallet={wallet} onSubmit={handleBidSubmit} />}
