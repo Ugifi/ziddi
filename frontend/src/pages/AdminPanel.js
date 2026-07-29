@@ -11,14 +11,14 @@ function toIST(dateStr) {
   try {
     let str = String(dateStr);
     if (!str.includes('T') && str.includes(' ')) {
-      str = str.replace(' ', 'T') + 'Z';
+      str = str.replace(' ', 'T'); // ← 'Z' hata diya
     }
     const d = new Date(str);
     if (isNaN(d.getTime())) return '';
     return d.toLocaleString('en-IN', {
       day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: true,
-      timeZone: 'Asia/Kolkata'
+      hour: '2-digit', minute: '2-digit', hour12: true
+      // ← timeZone hata diya
     });
   } catch (e) { return ''; }
 }
