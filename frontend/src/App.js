@@ -3,7 +3,8 @@ import './App.css';
 
 import AuthScreen from './components/AuthScreen';
 import Toast from './components/Toast';
-import { AddModal, WithdrawModal } from './components/Modals';
+import { DepositModal } from './pages/OtherPages';
+import { WithdrawModal } from './components/Modals';
 
 import HomeScreen from './pages/HomeScreen';
 import GameTypePage from './pages/GameTypePage';
@@ -676,8 +677,7 @@ const navigate = id => {
       {page === 'disawar'    && <CategoryGamesScreen category="disawar" onPlay={g => { setSelectedGame(g); setPage('game-types'); }} />}
       {page === 'bids'       && <BidsPage apiCall={apiCall}/>}
       {page === 'txns'       && <TxnsPage apiCall={apiCall} navigate={navigate}/>}
-      {page === 'wallet'     && <WalletPage wallet={wallet} onAdd={() => setModal('add')} onWith={() => setModal('with')} user={user} navigate={navigate} apiCall={apiCall}/>}
-      {page === 'support'    && <SupportPage apiCall={apiCall} user={user} />}
+{page === 'wallet' && <WalletPage wallet={wallet} onAdd={null} onWith={() => setModal('with')} user={user} navigate={navigate} apiCall={apiCall}/>}      {page === 'support'    && <SupportPage apiCall={apiCall} user={user} />}
       {page === 'htp'        && <HowToPlayPage onBack={() => setPage('home')} />}
       {page === 'faq'        && <FAQPage onBack={() => setPage('home')} />}
       {page === 'terms'      && <TermsPage onBack={() => setPage('home')} />}
@@ -718,7 +718,7 @@ const navigate = id => {
         />
       )}
 
-      {modal === 'add'  && <AddModal onClose={() => setModal(null)} onSuccess={handleAdd} apiCall={apiCall} fetchWallet={fetchWallet}/>}
+      {modal === 'add' && <DepositModal apiCall={apiCall} onClose={() => { setModal(null); fetchWallet(); }} onSuccess={() => { fetchWallet(); }} />}
       {modal === 'with' && <WithdrawModal wallet={wallet} onClose={() => setModal(null)} onSuccess={handleWith}/>}
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)}/>}
 
