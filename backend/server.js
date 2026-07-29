@@ -93,7 +93,31 @@ app.get('/create-admin', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+// ─── CRON JOB: Auto Scraper (Har 1 minute mein chalega) ────────────────────
+cron.schedule('* * * * *', async () => {
+  console.log('⏳ [Cron] Running Auto Scraper...');
+  try {
+    const res = await syncResults();
+    if (res.updated > 0) {
+      console.log(`✅ [Cron] Scraper Update: ${res.message}`);
+    }
+  } catch (err) {
+    console.error('❌ [Cron] Scraper Error:', err.message);
+  }
+});
 
+// ─── CRON JOB: 2 AM Auto Reset (Database Clear) ─────────────────────────────
+// Ye raat ke 2 baje sabhi purane results ko NULL kar dega
+cron.schedule('0 2 * * *', async () => {
+  console.log('⏳ [2 AM Cron] Resetting all game results for the new day...');
+  try {
+    await db.query("UPDATE games SET open_result = NULL, close_result = NULL, jodi_result = NULL, result_date = NULL, status = 'open'");
+    console.log('✅ [2 AM Cron] All games cleared successfully!');
+  } catch (err) {
+    console.error('❌ [2 AM Cron] Reset Error:', err.message);
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
 // ─── CRON JOB: 2 AM Auto Reset (Database Clear) ─────────────────────────────
 // Ye raat ke 2 baje sabhi purane results ko NULL kar dega
 cron.schedule('0 2 * * *', async () => {
