@@ -111,7 +111,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     } catch { return false; }
   };
 
-  // ✅ Result Format with 30 Sec Delay & Date Filter
+  // ✅ Result Format with 30 Sec Delay
   const formatResult = (g) => {
     let openRes = g.open_result;
     let closeRes = g.close_result;
@@ -140,22 +140,31 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     return `${open}-${jodi}-${close}`;
   };
 
-  // ✅ NEW STATUS LOGIC: Time aur Result ke hisaab se status decide karega
+   // ✅ STATUS LOGIC: 2 AM Reset Logic Added
   const getGameStatus = (g) => {
     const now = new Date();
+    const currentHour = now.getHours();
     const currentTime = now.toTimeString().split(' ')[0]; // "HH:MM:SS"
     
-    // 1. Agar close time guzar gaya ya dono result aa gaye
-    if (currentTime >= g.close_time || (g.open_result && g.close_result)) {
+    // 2 AM Rule: Agar raat 12 baje se 2 baje ke bechein hai, toh game closed rahega
+    if (currentHour < 2) {
       return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
     }
     
-    // 2. Agar open result aa gaya hai (close time nahi hua)
-    if (g.open_result) {
+    // Agar close time guzar gaya ya dono result aa gaye
+    const hasOpen = g.open_result && String(g.open_result).trim() !== '';
+    const hasClose = g.close_result && String(g.close_result).trim() !== '';
+    
+    if (currentTime >= g.close_time || (hasOpen && hasClose)) {
+      return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
+    }
+    
+    // Agar open result aa gaya hai (close time nahi hua)
+    if (hasOpen) {
       return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
     }
     
-    // 3. Agar open result nahi aaya hai
+    // Agar open result nahi aaya hai
     return { text: 'Market is open', canPlay: true, className: 'hs-status-running' };
   };
 
@@ -414,7 +423,6 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
           WITHDRAW
         </button>
       </div>
-
 
       {/* LIVE MARKETS */}
       <div className="hs-live-header">
