@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { DepositModal } from './OtherPages';
 
 export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, apiCall }) {
   const [games, setGames] = useState([]);
@@ -7,7 +6,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   const [currentSlide, setCurrentSlide] = useState(0);
   const [disawarGames, setDisawarGames] = useState([]);
   const [showDisawar, setShowDisawar] = useState(false);
-  const [showDeposit, setShowDeposit] = useState(false);
+  
 
   const [settings, setSettings] = useState({
     site_name: 'MATKA KING',
@@ -372,14 +371,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
         @keyframes loaderSpin { to{transform:rotate(360deg)} }
       `}</style>
 
-      {/* ── DEPOSIT MODAL ── */}
-      {showDeposit && (
-        <DepositModal
-          apiCall={apiCall}
-          onClose={() => setShowDeposit(false)}
-          onSuccess={() => { setShowDeposit(false); }}
-        />
-      )}
+      
 
       {/* TICKER */}
       <div className="hs-ticker">
@@ -408,7 +400,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
 
       {/* ADD MONEY / WITHDRAW */}
       <div className="hs-action-row">
-        <button className="hs-btn" onClick={() => setShowDeposit(true)}>
+        <button className="hs-btn" onClick={() => onAdd && onAdd()}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="1" y="4" width="22" height="16" rx="3"/>
             <line x1="1" y1="10" x2="23" y2="10"/>
@@ -482,4 +474,4 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
       <div style={{ height: 16 }} />
     </div>
   );
-}
+} 
