@@ -41,11 +41,21 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const id = gameType.id;
   const nt = gameType.numType;
 
-  // ── SESSION LOGIC ────────────────────────────────────────────
-  // open_result aa gaya → open session band, sirf close allow
-  // dono aa gaye → dono band (ye page tak user aayega hi nahi normally)
-  const openDeclared  = !!game.open_result;
-  const closeDeclared = !!game.close_result;
+  // ✅ TIME-BASED SESSION LOGIC (HomeScreen jaisa 30 sec delay)
+  const isTimePassed = (timeStr, delaySeconds = 30) => {
+    if (!timeStr) return false;
+    try {
+      const now = new Date();
+      const [h, m, s] = timeStr.split(':').map(Number);
+      const gameDate = new Date();
+      gameDate.setHours(h, m, s || 0, 0);
+      const diff = (now.getTime() - gameDate.getTime()) / 1000;
+      return diff >= delaySeconds;
+    } catch { return false; }
+  };
+
+  const openDeclared  = !!game.open_result && isTimePassed(game.open_time, 30);
+  const closeDeclared = !!game.close_result && isTimePassed(game.close_time, 30);
 
   // default session: agar open declared hai toh 'close', warna 'open'
   const defaultSession = openDeclared ? 'close' : 'open';
@@ -394,7 +404,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         }
         .bf-session-btn:hover { border-color: #1976D2; }
         .bf-session-btn.active { background: linear-gradient(135deg,#1565C0,#1976D2); color: #fff; border-color: #1565C0; }
-        .bf-session-btn.disabled { opacity: 0.4; cursor: not-allowed; }
+        .bf-session-btn.disabled { opacity: 0.4; cursor: 'not-allowed'; }
         .bf-session-btn.disabled:hover { border-color: #BBDEFB; }
 
         .bf-add-btn {
