@@ -94,21 +94,18 @@ app.get('/create-admin', async (req, res) => {
   }
 });
 
-// ─── CRON JOB: Auto Scraper Scheduler ────────────────────────────────
-// Ye har 1 minute mein dpbossss.boston se data fetch karega aur DB update karega
-cron.schedule('* * * * *', async () => {
-  // console.log('⏳ [Cron] Running Auto Scraper...'); // Uncomment for debugging
+// ─── CRON JOB: 2 AM Auto Reset (Database Clear) ─────────────────────────────
+// Ye raat ke 2 baje sabhi purane results ko NULL kar dega
+cron.schedule('0 2 * * *', async () => {
+  console.log('⏳ [2 AM Cron] Resetting all game results for the new day...');
   try {
-    const res = await syncResults();
-    if (res.updated > 0) {
-      console.log(`✅ [Cron] Scraper Update: ${res.message}`);
-    }
+    await db.query("UPDATE games SET open_result = NULL, close_result = NULL, jodi_result = NULL, result_date = NULL, status = 'open'");
+    console.log('✅ [2 AM Cron] All games cleared successfully!');
   } catch (err) {
-    console.error('❌ [Cron] Scraper Error:', err.message);
+    console.error('❌ [2 AM Cron] Reset Error:', err.message);
   }
 });
-// ─────────────────────────────────────────────────────────────────────
-
+// ─────────────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
