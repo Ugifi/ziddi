@@ -8,7 +8,12 @@ const db      = require('../config/db');
 function getISTDate() {
   const now = new Date();
   const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-  return ist.toISOString().split('T')[0]; // "2024-07-28"
+  
+  // ✅ 2 AM Reset Logic: Agar time raat 2 baje se pehle hai, toh pichli date manni hai
+  if (ist.getUTCHours() < 2) {
+    ist.setUTCDate(ist.getUTCDate() - 1);
+  }
+  return ist.toISOString().split('T')[0];
 }
 
 function getCurrentISTMinutes() {
@@ -143,12 +148,11 @@ const PAYOUTS = {
   'odd_even': 2, 'two_digit_pana': 300
 };
 
-// ── BID SETTLEMENT LOGIC (100% ACCURATE & CATCHES NULL/WON/LOST) ─────────────
+// ── BID SETTLEMENT LOGIC ─────────────────────────────────────────────────────
 async function settleGameBids(gameId, openRes, closeRes) {
   try {
-    // ✅ FIX: Yeh query NULL, pending, won, lost sabko uthayegi
     const [bids] = await db.query('SELECT * FROM bids WHERE game_id = ? AND (status IS NULL OR status = "" OR status = "pending")', [gameId]);  
-      if (!bids.length) return;
+    if (!bids.length) return;
 
     let openDigit = null, closeDigit = null, jodi = null;
     if (openRes) openDigit = String(openRes).split('').reduce((s, d) => s + parseInt(d), 0) % 10;
@@ -231,7 +235,7 @@ async function settleGameBids(gameId, openRes, closeRes) {
   }
 }
 
-// ── FORCE SETTLE ROUTE (Sab atke hue bids ko theek karne ke liye) ────────────
+// ── FORCE SETTLE ROUTE ───────────────────────────────────────────────────────
 router.get('/force-settle', async (req, res) => {
   try {
     const [games] = await db.query("SELECT id, open_result, close_result FROM games WHERE open_result IS NOT NULL OR close_result IS NOT NULL");
@@ -253,7 +257,7 @@ async function syncResults() {
   const games = await scrapeAllGames();
   if (!games.length) return { success: false, message: 'Kuch scrape nahi hua' };
 
-  const todayDate  = getISTDate();
+  const todayDate  = getISTDate(); // 2 AM wali date function
   const nowMinutes = getCurrentISTMinutes();
 
   const [dbGames] = await db.query(
@@ -278,35 +282,48 @@ async function syncResults() {
     let updateOpen = false;
     let updateClose = false;
 
-    if (item.open_result && openTimePassed && dbGame.open_result !== item.open_result) {
-      updateOpen = true;
+    // ── TUMHARA STRICT RULE YAHAN HAI ──────────────────────────────────────
+    if (item.is_complete) {
+      // Site par dono (Open+Close) sath aaye hain (e.g., 469-99-667)
+      if (!closeTimePassed) {
+        // Agar close time nahi hua, toh ye purana data hai. SKIP KARO!
+        skipped++;
+        continue;
+      }
+      // Agar close time ho gaya hai, toh dono update karo (agar DB se alag hai)
+      if (dbGame.close_result !== item.close_result) {
+        updateClose = true;
+        updateOpen = true; 
+      }
+    } else {
+      // Site par sirf Open aaya hai (e.g., 469-9)
+      if (openTimePassed && dbGame.open_result !== item.open_result) {
+        updateOpen = true;
+      }
     }
-    if (item.close_result && closeTimePassed && dbGame.close_result !== item.close_result) {
-      updateClose = true;
-    }
+    // ──────────────────────────────────────────────────────────────────────────
 
-   // ✅ NAYA — sirf pending bids hone par settle karo
-if (!updateOpen && !updateClose) {
-  const [pendingBids] = await db.query(
-    'SELECT COUNT(*) as cnt FROM bids WHERE game_id = ? AND (status IS NULL OR status = "" OR status = "pending")',
-    [dbGame.id]
-  );
-  if (pendingBids[0].cnt > 0) {
-    await settleGameBids(dbGame.id, dbGame.open_result, dbGame.close_result);
-  }
-  skipped++;
-  continue;
-}
+    if (!updateOpen && !updateClose) {
+      const [pendingBids] = await db.query(
+        'SELECT COUNT(*) as cnt FROM bids WHERE game_id = ? AND (status IS NULL OR status = "" OR status = "pending")',
+        [dbGame.id]
+      );
+      if (pendingBids[0].cnt > 0) {
+        await settleGameBids(dbGame.id, dbGame.open_result, dbGame.close_result);
+      }
+      skipped++;
+      continue;
+    }
 
     if (updateOpen) {
       await db.query(
         `UPDATE games SET 
           open_result = ?, 
           jodi_result = COALESCE(?, jodi_result), 
-          result_date = CURDATE(), 
+          result_date = ?, 
           result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30') 
          WHERE id = ?`,
-        [item.open_result, item.jodi_result, dbGame.id]
+        [item.open_result, item.jodi_result, todayDate, dbGame.id] // 2 AM wali date save hogi
       );
     }
     
@@ -315,10 +332,10 @@ if (!updateOpen && !updateClose) {
         `UPDATE games SET 
           close_result = ?, 
           jodi_result = COALESCE(?, jodi_result), 
-          result_date = CURDATE(), 
+          result_date = ?, 
           result_declared_at = CONVERT_TZ(NOW(), '+00:00', '+05:30') 
          WHERE id = ?`,
-        [item.close_result, item.jodi_result, dbGame.id]
+        [item.close_result, item.jodi_result, todayDate, dbGame.id]
       );
     }
 
