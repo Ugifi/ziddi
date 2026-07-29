@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-
 // ── BLUE THEME SHARED STYLES ──
 const B = {
   page:      { background: '#eef2f7', minHeight: '100vh', paddingBottom: 80, color: '#222', fontFamily: '"Nunito", "Segoe UI", sans-serif' },
