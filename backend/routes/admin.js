@@ -11,14 +11,14 @@ router.use(adminMiddleware);
 // ─── DASHBOARD STATS ──────────────────────────────────────────────────────────
 router.get('/stats', async (req, res) => {
   try {
-    const [[users]]        = await db.query('SELECT COUNT(*) as total FROM users WHERE role = "user"');
-    const [[activeGames]]  = await db.query('SELECT COUNT(*) as total FROM games WHERE status = "open"');
-    const [[todayBids]]    = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM bids WHERE DATE(created_at) = CURDATE()');
-    const [[pendingDep]]   = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="deposit" AND status="pending"');
-    const [[pendingWith]]  = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="withdrawal" AND status="pending"');
+    const [[users]] = await db.query('SELECT COUNT(*) as total FROM users WHERE role = "user"');
+    const [[activeGames]] = await db.query('SELECT COUNT(*) as total FROM games WHERE status = "open"');
+    const [[todayBids]] = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM bids WHERE DATE(created_at) = CURDATE()');
+    const [[pendingDep]] = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="deposit" AND status="pending"');
+    const [[pendingWith]] = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="withdrawal" AND status="pending"');
     const [[totalDeposit]] = await db.query('SELECT SUM(amount) as total FROM deposit_requests WHERE type="deposit" AND status="approved"');
-    const [[totalWin]]     = await db.query('SELECT SUM(win_amount) as total FROM bids WHERE status="win"');
-    const [[totalWallet]]  = await db.query('SELECT SUM(wallet_balance) as w, SUM(winning_balance) as ww FROM users');
+    const [[totalWin]] = await db.query('SELECT SUM(win_amount) as total FROM bids WHERE status="win"');
+    const [[totalWallet]] = await db.query('SELECT SUM(wallet_balance) as w, SUM(winning_balance) as ww FROM users');
 
     res.json({
       success: true,
@@ -45,8 +45,8 @@ router.get('/stats', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const page   = parseInt(req.query.page) || 1;
-    const limit  = parseInt(req.query.limit) || 30;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 30;
     const offset = (page - 1) * limit;
     const search = req.query.search || '';
 
@@ -78,9 +78,9 @@ router.get('/users/:id', async (req, res) => {
     );
     if (!user.length) return res.status(404).json({ success: false, message: 'User not found' });
 
-    const [bids]  = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM bids WHERE user_id = ?', [req.params.id]);
-    const [wins]  = await db.query('SELECT COUNT(*) as total, SUM(win_amount) as volume FROM bids WHERE user_id = ? AND status = "win"', [req.params.id]);
-    const [txns]  = await db.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10', [req.params.id]);
+    const [bids] = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM bids WHERE user_id = ?', [req.params.id]);
+    const [wins] = await db.query('SELECT COUNT(*) as total, SUM(win_amount) as volume FROM bids WHERE user_id = ? AND status = "win"', [req.params.id]);
+    const [txns] = await db.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10', [req.params.id]);
 
     res.json({
       success: true,
@@ -98,13 +98,13 @@ router.post('/users/:id/login-as', async (req, res) => {
   try {
     const [users] = await db.query('SELECT id, name, mobile, role, wallet_balance, winning_balance, is_blocked FROM users WHERE id = ?', [req.params.id]);
     if (!users.length) return res.status(404).json({ success: false, message: 'User not found' });
-    
+
     const user = users[0];
     if (user.is_blocked) return res.status(400).json({ success: false, message: 'User is blocked' });
 
     // Generate a temporary token for the user
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '2h' });
-    
+
     res.json({ success: true, token, user });
   } catch (err) {
     console.error(err);
@@ -133,7 +133,7 @@ router.put('/users/:id/coins', [
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
   const { amount, action, wallet, note } = req.body;
-  const amountF   = parseFloat(amount);
+  const amountF = parseFloat(amount);
   const walletCol = wallet === 'winning' ? 'winning_balance' : 'wallet_balance';
   const walletType = wallet === 'winning' ? 'winning_wallet' : 'wallet';
 
@@ -156,7 +156,7 @@ router.put('/users/:id/coins', [
       `INSERT INTO transactions (user_id, type, wallet_type, amount, description, status)
        VALUES (?, ?, ?, ?, ?, 'completed')`,
       [req.params.id, action === 'add' ? 'credit' : 'debit', walletType, amountF,
-       note || `Admin ${action === 'add' ? 'credited' : 'deducted'} ₹${amountF}`]
+      note || `Admin ${action === 'add' ? 'credited' : 'deducted'} ₹${amountF}`]
     );
 
     await conn.commit();
@@ -207,7 +207,7 @@ router.post('/games', [
   try {
     const [result] = await db.query(
       'INSERT INTO games (name, open_time, close_time, result_time, game_category, min_bid, max_bid, status, is_hidden) VALUES (?, ?, ?, ?, ?, ?, ?, "closed", 0)',
-      [name, open_time, close_time, close_time, category || 'regular', 10,  100000000]
+      [name, open_time, close_time, close_time, category || 'regular', 10, 100000000]
     );
     res.status(201).json({
       success: true,
@@ -274,7 +274,7 @@ router.put('/games/:id/result', [
   const { open_result, close_result } = req.body;
   const gameId = req.params.id;
 
-  const openDigit  = parseInt(open_result.trim().split('').reduce((a, b) => parseInt(a) + parseInt(b), 0)) % 10;
+  const openDigit = parseInt(open_result.trim().split('').reduce((a, b) => parseInt(a) + parseInt(b), 0)) % 10;
   const closeDigit = parseInt(close_result.trim().split('').reduce((a, b) => parseInt(a) + parseInt(b), 0)) % 10;
   const jodi_result = `${String(openDigit).padStart(1, '0')}${String(closeDigit).padStart(1, '0')}`;
 
@@ -341,7 +341,7 @@ router.put('/games/:id/result', [
       }
 
       if (isWinner) {
-        const payout    = GAME_PAYOUTS[bid.game_type] || 9;
+        const payout = GAME_PAYOUTS[bid.game_type] || 9;
         const winAmount = parseFloat(bid.amount) * payout;
         await conn.query('UPDATE users SET winning_balance = winning_balance + ? WHERE id = ?', [winAmount, bid.user_id]);
         await conn.query("UPDATE bids SET status='win', win_amount=? WHERE id=?", [winAmount, bid.id]);
@@ -380,13 +380,12 @@ router.put('/games/:id/result', [
 router.get('/deposits', async (req, res) => {
   try {
     const status = req.query.status || 'pending';
-    const page   = parseInt(req.query.page) || 1;
-    const limit  = parseInt(req.query.limit) || 30;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 30;
     const offset = (page - 1) * limit;
 
     const [rows] = await db.query(
-      `SELECT d.*, u.name, u.mobile,
-        DATE_FORMAT(d.created_at, '%d/%m/%Y, %h:%i %p') as created_at
+      `SELECT d.*, u.name, u.mobile
        FROM deposit_requests d
        JOIN users u ON d.user_id = u.id
        WHERE d.type = 'deposit' AND d.status = ?
@@ -492,10 +491,8 @@ router.put('/deposits/:id', [
 
 router.get('/withdrawals', async (req, res) => {
   try {
-    const status = req.query.status || 'pending';
     const [rows] = await db.query(
-      `SELECT d.*, u.name, u.mobile,
-        DATE_FORMAT(d.created_at, '%d/%m/%Y, %h:%i %p') as created_at
+      `SELECT d.*, u.name, u.mobile
        FROM deposit_requests d
        JOIN users u ON d.user_id = u.id
        WHERE d.type = 'withdrawal' AND d.status = ?
@@ -560,13 +557,12 @@ router.put('/withdrawals/:id', [
 
 router.get('/bids', async (req, res) => {
   try {
-    const page    = parseInt(req.query.page) || 1;
-    const limit   = parseInt(req.query.limit) || 50;
-    const offset  = (page - 1) * limit;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
     const game_id = req.query.game_id || null;
 
-    let query = `SELECT b.*, u.name, u.mobile, g.name as game_name,
-     DATE_FORMAT(b.created_at, '%d/%m/%Y, %h:%i %p') as created_at
+    let query = `SELECT b.*, u.name, u.mobile, g.name as game_name
     FROM bids b
       JOIN users u ON b.user_id = u.id
       JOIN games g ON b.game_id = g.id WHERE 1=1`;
@@ -595,7 +591,7 @@ router.get('/settings', async (req, res) => {
     rows.forEach(r => { settings[r.setting_key] = r.setting_value; });
 
     if (!settings.whatsapp && settings.whatsapp_support) settings.whatsapp = settings.whatsapp_support;
-    if (!settings.whatsapp_support && settings.whatsapp)  settings.whatsapp_support = settings.whatsapp;
+    if (!settings.whatsapp_support && settings.whatsapp) settings.whatsapp_support = settings.whatsapp;
     if (!settings.phone && settings.support_phone) settings.phone = settings.support_phone;
     if (!settings.site_name) settings.site_name = 'SAKTA MATKA';
 
@@ -609,12 +605,12 @@ router.get('/settings', async (req, res) => {
 router.post('/settings', async (req, res) => {
   try {
     const incoming = req.body;
-    const toSave   = { ...incoming };
+    const toSave = { ...incoming };
 
-    if (toSave.whatsapp)         toSave.whatsapp_support = toSave.whatsapp;
-    if (toSave.whatsapp_support) toSave.whatsapp         = toSave.whatsapp_support;
-    if (toSave.phone)            toSave.support_phone    = toSave.phone;
-    if (toSave.support_phone)    toSave.phone            = toSave.support_phone;
+    if (toSave.whatsapp) toSave.whatsapp_support = toSave.whatsapp;
+    if (toSave.whatsapp_support) toSave.whatsapp = toSave.whatsapp_support;
+    if (toSave.phone) toSave.support_phone = toSave.phone;
+    if (toSave.support_phone) toSave.phone = toSave.support_phone;
 
     for (const [key, value] of Object.entries(toSave)) {
       if (key === undefined || key === 'undefined') continue;
