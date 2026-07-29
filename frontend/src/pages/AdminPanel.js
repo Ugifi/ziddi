@@ -22,20 +22,37 @@ function toIST(dateStr) {
     });
   } catch (e) { return ''; }
 }
-
-function apiCall(path, method = 'GET', body = null) {
+// NAYA — timeout + retry wala
+async function apiCall(path, method = 'GET', body = null, retries = 2) {
   const token = localStorage.getItem('mk_token');
   const url = method === 'GET'
     ? `${API}${path}${path.includes('?') ? '&' : '?'}t=${Date.now()}`
     : `${API}${path}`;
-  return fetch(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    ...(body ? { body: JSON.stringify(body) } : {})
-  }).then(r => r.json());
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15 sec timeout
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn(`API attempt ${attempt + 1} failed:`, err.message);
+      if (attempt === retries) return { success: false, message: 'Server se connect nahi ho pa raha. Thodi der mein retry karo.' };
+      await new Promise(r => setTimeout(r, 2000)); // 2 sec wait between retries
+    }
+  }
 }
 
 // ── BLUE THEME TOKENS ──────────────────────────────────────────
@@ -580,8 +597,23 @@ export default function AdminPanel({ onLogout }) {
       apiCall('/api/admin/stats').then(d => { if (d.success) { setStats(d.stats); setLastRefresh(new Date()); } done(); }).catch(done);
     } else if (currentPage === 'users') {
       apiCall('/api/admin/users').then(d => { if (d.success) { setUsers(d.users); setLastRefresh(new Date()); } done(); }).catch(done);
-    } else if (currentPage === 'games' || currentPage === 'results') {
-      apiCall('/api/admin/games').then(d => { if (d.success) { setGames(d.games); setLastRefresh(new Date()); } done(); }).catch(done);
+  // NAYA — loading state + error message
+} else if (currentPage === 'games' || currentPage === 'results') {
+  apiCall('/api/admin/games').then(d => {
+    if (d.success && d.games) {
+      setGames(d.games);
+      setLastRefresh(new Date());
+      console.log('✅ Games loaded:', d.games.length);
+    } else {
+      console.error('❌ Games fetch failed:', d.message);
+      showToast('❌ Games load nahi hue: ' + (d.message || 'Server error'));
+    }
+    done();
+  }).catch(err => {
+    console.error('Games fetch error:', err);
+    showToast('❌ Server se connect nahi ho pa raha!');
+    done();
+  });
     } else if (currentPage === 'deposits') {
       apiCall('/api/admin/deposits').then(d => { if (d.success) { setDeposits(d.deposits); setLastRefresh(new Date()); } done(); }).catch(done);
     } else if (currentPage === 'withdrawals') {
