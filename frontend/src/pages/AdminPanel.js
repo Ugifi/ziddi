@@ -8,25 +8,19 @@ const API = 'https://ziddi-1-we11.onrender.com';
 
 function toIST(dateStr) {
   if (!dateStr) return '';
-  
   try {
     let str = String(dateStr);
-    // Convert "YYYY-MM-DD HH:MM:SS" to ISO format "YYYY-MM-DDTHH:MM:SSZ"
     if (!str.includes('T') && str.includes(' ')) {
       str = str.replace(' ', 'T') + 'Z';
     }
-    
     const d = new Date(str);
     if (isNaN(d.getTime())) return '';
-
     return d.toLocaleString('en-IN', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit', hour12: true,
       timeZone: 'Asia/Kolkata'
     });
-  } catch (e) {
-    return '';
-  }
+  } catch (e) { return ''; }
 }
 
 function apiCall(path, method = 'GET', body = null) {
@@ -383,12 +377,12 @@ function DepositCard({ d, onApprove, onReject }) {
         <div style={{ fontWeight: 900, fontSize: 20, color: C.success }}>₹{Number(d.amount).toLocaleString()}</div>
       </div>
       {(d.utr_number || d.transaction_id) && (
-        <div style={{ background: C.inputBg, border: `1.5px solid ${C.inputBdr}`, borderRadius: 8, padding: '8px 12px', marginBottom: 8, fontSize: 13 }}>
-          UTR: <strong style={{ color: C.textMain }}>{d.utr_number || d.transaction_id}</strong>
+        <div style={{ background: C.inputBg, border: `1.5px solid ${C.inputBdr}`, borderRadius: 8, padding: '8px 12px', marginBottom: 8, fontSize: 13, color: C.textSub }}>
+          UTR/Ref No: <strong style={{ color: C.textMain }}>{d.utr_number || d.transaction_id}</strong>
         </div>
       )}
       {d.upi_id && <div style={{ fontSize: 13, color: C.textSub, marginBottom: 8, fontWeight: 600 }}>UPI Ref: {d.upi_id}</div>}
-      <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, fontWeight: 600 }}>{toIST(d.created_at)}</div>
+      <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, fontWeight: 600 }}>📅 {toIST(d.created_at)}</div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <StatusBadge status={d.status} />
         {d.status === 'pending' && <>
@@ -431,7 +425,7 @@ function WithdrawCard({ w, onApprove, onReject }) {
           </>
         )}
       </div>
-      <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, fontWeight: 600 }}>{toIST(w.created_at)}</div>
+      <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, fontWeight: 600 }}>📅 {toIST(w.created_at)}</div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <StatusBadge status={w.status} />
         {w.status === 'pending' && <>
@@ -914,7 +908,8 @@ export default function AdminPanel({ onLogout }) {
                   onChangeMobile={handleChangeMobile}
                   onLoginAs={loginAsUser}
                 />
-              ))}
+              ))
+            }
           </div>
         )}
 
@@ -976,7 +971,8 @@ export default function AdminPanel({ onLogout }) {
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+            }
           </div>
         </>}
 
@@ -1015,20 +1011,22 @@ export default function AdminPanel({ onLogout }) {
                     Game: <strong style={{ color: C.primary }}>{b.game_name}</strong> · Session: <strong style={{ color: C.textSub }}>{b.session?.toUpperCase() || 'N/A'}</strong> · Type: <strong>{b.game_type}</strong><br />
                     Number: <strong style={{ fontSize: 15 }}>{b.number}</strong> · Amount: <strong style={{ color: C.success, fontSize: 15 }}>₹{Number(b.amount).toLocaleString()}</strong>
                   </div>
-                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 10, fontWeight: 600 }}>{toIST(b.created_at)}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 10, fontWeight: 600 }}>📅 {toIST(b.created_at)}</div>
                 </div>
-              ))}
+              ))
+            }
           </div>
         )}
 
         {/* ── DECLARE RESULT ── */}
         {!loading && page === 'results' && (
-          <div style={B.card}><div style={B.title}>🏆 Declare Results</div>
+          <div style={B.card}>
+            <div style={B.title}>🏆 Declare Results</div>
             <div style={{ background: '#E3F2FD', border: `1.5px solid #90CAF9`, borderRadius: 10, padding: 12, color: C.primary, fontSize: 12, marginBottom: 16, fontWeight: 600, lineHeight: 1.6 }}>
               Format: <strong>OpenPana-ClosePana</strong> (e.g. <code>128-456</code>)<br />
               Digit auto-calculate hoga. Winners ko winning_balance credit milega.
             </div>
-            {games.map(g => (
+            {games.length === 0 ? <div style={{ color: C.textMuted, fontSize: 13, fontWeight: 700, padding: 10 }}>Koi game nahi mila.</div> : games.map(g => (
               <div key={g.id} style={{ background: C.inputBg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1.5px solid ${C.cardBorder}` }}>
                 <div style={{ fontWeight: 800, fontSize: 15, color: C.textMain, marginBottom: 4 }}>{g.name}</div>
                 <div style={{ fontSize: 12, color: C.textSub, marginBottom: 12, fontWeight: 600 }}>
@@ -1068,7 +1066,8 @@ export default function AdminPanel({ onLogout }) {
                     if (res.success) { showToast('Notice deleted ✅'); fetchPageData('notices'); }
                   }} style={{ background: C.dangerBg, color: C.danger, border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>DEL</button>
                 </div>
-              ))}
+              ))
+            }
           </div>
         )}
 
