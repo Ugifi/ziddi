@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken'); // ✅ JWT Added
+const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/db');
 const { adminMiddleware } = require('../middleware/auth');
@@ -11,14 +11,14 @@ router.use(adminMiddleware);
 // ─── DASHBOARD STATS ──────────────────────────────────────────────────────────
 router.get('/stats', async (req, res) => {
   try {
-    const [[users]] = await db.query('SELECT COUNT(*) as total FROM users WHERE role = "user"');
-    const [[activeGames]] = await db.query('SELECT COUNT(*) as total FROM games WHERE status = "open"');
-    const [[todayBids]] = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM bids WHERE DATE(created_at) = CURDATE()');
-    const [[pendingDep]] = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="deposit" AND status="pending"');
-    const [[pendingWith]] = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="withdrawal" AND status="pending"');
+    const [[users]]        = await db.query('SELECT COUNT(*) as total FROM users WHERE role = "user"');
+    const [[activeGames]]  = await db.query('SELECT COUNT(*) as total FROM games WHERE status = "open"');
+    const [[todayBids]]    = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM bids WHERE DATE(created_at) = CURDATE()');
+    const [[pendingDep]]   = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="deposit" AND status="pending"');
+    const [[pendingWith]]  = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="withdrawal" AND status="pending"');
     const [[totalDeposit]] = await db.query('SELECT SUM(amount) as total FROM deposit_requests WHERE type="deposit" AND status="approved"');
-    const [[totalWin]] = await db.query('SELECT SUM(win_amount) as total FROM bids WHERE status="win"');
-    const [[totalWallet]] = await db.query('SELECT SUM(wallet_balance) as w, SUM(winning_balance) as ww FROM users');
+    const [[totalWin]]     = await db.query('SELECT SUM(win_amount) as total FROM bids WHERE status="win"');
+    const [[totalWallet]]  = await db.query('SELECT SUM(wallet_balance) as w, SUM(winning_balance) as ww FROM users');
 
     res.json({
       success: true,
@@ -42,7 +42,6 @@ router.get('/stats', async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 //  USER MANAGEMENT
 // ══════════════════════════════════════════════════════════════
-
 router.get('/users', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -50,84 +49,39 @@ router.get('/users', async (req, res) => {
     const offset = (page - 1) * limit;
     const search = req.query.search || '';
 
-    let query = `SELECT id, name, mobile, role, wallet_balance, winning_balance,
-                        is_blocked, last_login, created_at, referral_code
-                 FROM users WHERE role = 'user'`;
+    let query = `SELECT id, name, mobile, role, wallet_balance, winning_balance, is_blocked, last_login, created_at, referral_code FROM users WHERE role = 'user'`;
     const params = [];
     if (search) { query += ' AND (name LIKE ? OR mobile LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     const [users] = await db.query(query, params);
-    const [count] = await db.query(
-      'SELECT COUNT(*) as total FROM users WHERE role = "user"' + (search ? ' AND (name LIKE ? OR mobile LIKE ?)' : ''),
-      search ? [`%${search}%`, `%${search}%`] : []
-    );
+    const [count] = await db.query('SELECT COUNT(*) as total FROM users WHERE role = "user"' + (search ? ' AND (name LIKE ? OR mobile LIKE ?)' : ''), search ? [`%${search}%`, `%${search}%`] : []);
 
     res.json({ success: true, users, pagination: { page, limit, total: count[0].total } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+  } catch (err) { res.status(500).json({ success: false, message: 'Server error' }); }
 });
 
-router.get('/users/:id', async (req, res) => {
-  try {
-    const [user] = await db.query(
-      'SELECT id, name, mobile, role, wallet_balance, winning_balance, is_blocked, last_login, created_at, referral_code FROM users WHERE id = ?',
-      [req.params.id]
-    );
-    if (!user.length) return res.status(404).json({ success: false, message: 'User not found' });
-
-    const [bids] = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM bids WHERE user_id = ?', [req.params.id]);
-    const [wins] = await db.query('SELECT COUNT(*) as total, SUM(win_amount) as volume FROM bids WHERE user_id = ? AND status = "win"', [req.params.id]);
-    const [txns] = await db.query('SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT 10', [req.params.id]);
-
-    res.json({
-      success: true,
-      user: user[0],
-      stats: { total_bids: bids[0].total, bid_volume: bids[0].volume || 0, wins: wins[0].total, win_amount: wins[0].volume || 0 },
-      recent_transactions: txns
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ─── LOGIN AS USER (Admin Impersonation) ─────────────────────────────────────
 router.post('/users/:id/login-as', async (req, res) => {
   try {
     const [users] = await db.query('SELECT id, name, mobile, role, wallet_balance, winning_balance, is_blocked FROM users WHERE id = ?', [req.params.id]);
     if (!users.length) return res.status(404).json({ success: false, message: 'User not found' });
-
     const user = users[0];
     if (user.is_blocked) return res.status(400).json({ success: false, message: 'User is blocked' });
-
-    // Generate a temporary token for the user
     const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '2h' });
-
     res.json({ success: true, token, user });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+  } catch (err) { console.error(err); res.status(500).json({ success: false, message: 'Server error' }); }
 });
 
-router.put('/users/:id/block', [
-  body('block').isBoolean()
-], async (req, res) => {
+router.put('/users/:id/block', [body('block').isBoolean()], async (req, res) => {
   try {
-    const { block } = req.body;
-    await db.query('UPDATE users SET is_blocked = ? WHERE id = ? AND role = "user"', [block ? 1 : 0, req.params.id]);
-    res.json({ success: true, message: `User ${block ? 'blocked' : 'unblocked'} successfully` });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+    await db.query('UPDATE users SET is_blocked = ? WHERE id = ? AND role = "user"', [req.body.block ? 1 : 0, req.params.id]);
+    res.json({ success: true, message: `User ${req.body.block ? 'blocked' : 'unblocked'} successfully` });
+  } catch (err) { res.status(500).json({ success: false, message: 'Server error' }); }
 });
 
 router.put('/users/:id/coins', [
-  body('amount').isFloat({ min: 1 }),
-  body('action').isIn(['add', 'deduct']),
-  body('wallet').isIn(['wallet', 'winning'])
+  body('amount').isFloat({ min: 1 }), body('action').isIn(['add', 'deduct']), body('wallet').isIn(['wallet', 'winning'])
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
@@ -140,66 +94,48 @@ router.put('/users/:id/coins', [
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
-
     const [user] = await conn.query(`SELECT ${walletCol} FROM users WHERE id = ? FOR UPDATE`, [req.params.id]);
     if (!user.length) { await conn.rollback(); return res.status(404).json({ success: false, message: 'User not found' }); }
-
-    if (action === 'deduct' && parseFloat(user[0][walletCol]) < amountF) {
-      await conn.rollback();
-      return res.status(400).json({ success: false, message: 'Insufficient balance to deduct' });
-    }
-
+    if (action === 'deduct' && parseFloat(user[0][walletCol]) < amountF) { await conn.rollback(); return res.status(400).json({ success: false, message: 'Insufficient balance' }); }
+    
     const op = action === 'add' ? '+' : '-';
     await conn.query(`UPDATE users SET ${walletCol} = ${walletCol} ${op} ? WHERE id = ?`, [amountF, req.params.id]);
-
-    await conn.query(
-      `INSERT INTO transactions (user_id, type, wallet_type, amount, description, status)
-       VALUES (?, ?, ?, ?, ?, 'completed')`,
-      [req.params.id, action === 'add' ? 'credit' : 'debit', walletType, amountF,
-      note || `Admin ${action === 'add' ? 'credited' : 'deducted'} ₹${amountF}`]
-    );
-
+    await conn.query(`INSERT INTO transactions (user_id, type, wallet_type, amount, description, status) VALUES (?, ?, ?, ?, ?, 'completed')`, [req.params.id, action === 'add' ? 'credit' : 'debit', walletType, amountF, note || `Admin ${action === 'add' ? 'credited' : 'deducted'} ₹${amountF}`]);
+    
     await conn.commit();
     res.json({ success: true, message: `₹${amountF} ${action === 'add' ? 'added to' : 'deducted from'} user wallet` });
-  } catch (err) {
-    await conn.rollback();
-    res.status(500).json({ success: false, message: 'Server error' });
-  } finally {
-    conn.release();
-  }
+  } catch (err) { await conn.rollback(); res.status(500).json({ success: false, message: 'Server error' }); } finally { conn.release(); }
 });
 
 // ── MOBILE NUMBER CHANGE ──────────────────────────────────────
-router.put('/users/:id/change-mobile', [
-  body('mobile').isMobilePhone().withMessage('Valid mobile number required')
-], async (req, res) => {
+router.put('/users/:id/change-mobile', [body('mobile').isMobilePhone().withMessage('Valid mobile number required')], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
-
   try {
     const { mobile } = req.body;
-
-    const [existing] = await db.query(
-      'SELECT id FROM users WHERE mobile = ? AND id != ?',
-      [mobile, req.params.id]
-    );
-    if (existing.length) {
-      return res.status(400).json({ success: false, message: 'Yeh mobile number already kisi aur user ke paas hai' });
-    }
-
+    const [existing] = await db.query('SELECT id FROM users WHERE mobile = ? AND id != ?', [mobile, req.params.id]);
+    if (existing.length) return res.status(400).json({ success: false, message: 'Yeh mobile number already kisi aur user ke paas hai' });
     await db.query('UPDATE users SET mobile = ? WHERE id = ?', [mobile, req.params.id]);
     res.json({ success: true, message: 'Mobile number successfully updated' });
+  } catch (err) { console.error(err); res.status(500).json({ success: false, message: 'Server error' }); }
+});
+
+// ══════════════════════════════════════════════════════════════
+//  GAME MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+
+// ✅ FIX: GET ALL GAMES (Yeh missing tha, isliye admin panel mein games nahi aa rahe the)
+router.get('/games', async (req, res) => {
+  try {
+    const [games] = await db.query('SELECT * FROM games WHERE status != "deleted" ORDER BY open_time ASC');
+    res.json({ success: true, games });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-router.post('/games', [
-  body('name').notEmpty(),
-  body('open_time').notEmpty(),
-  body('close_time').notEmpty()
-], async (req, res) => {
+router.post('/games', [body('name').notEmpty(), body('open_time').notEmpty(), body('close_time').notEmpty()], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array(), message: "Invalid Input" });
 
@@ -209,65 +145,32 @@ router.post('/games', [
       'INSERT INTO games (name, open_time, close_time, result_time, game_category, min_bid, max_bid, status, is_hidden) VALUES (?, ?, ?, ?, ?, ?, ?, "closed", 0)',
       [name, open_time, close_time, close_time, category || 'regular', 10, 100000000]
     );
-    res.status(201).json({
-      success: true,
-      message: 'Game created',
-      game: { id: result.insertId, name, open_time, close_time, status: 'closed', is_hidden: 0 }
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
-  }
+    res.status(201).json({ success: true, message: 'Game created', game: { id: result.insertId, name, open_time, close_time, status: 'closed', is_hidden: 0 } });
+  } catch (err) { console.error(err); res.status(500).json({ success: false, message: 'Server error: ' + err.message }); }
 });
 
 router.put('/games/:id', async (req, res) => {
   const { name, open_time, close_time, result_time, min_bid, max_bid } = req.body;
   try {
-    await db.query(
-      'UPDATE games SET name=?, open_time=?, close_time=?, result_time=?, min_bid=?, max_bid=? WHERE id=?',
-      [name, open_time, close_time, result_time, min_bid, max_bid, req.params.id]
-    );
+    await db.query('UPDATE games SET name=?, open_time=?, close_time=?, result_time=?, min_bid=?, max_bid=? WHERE id=?', [name, open_time, close_time, result_time, min_bid, max_bid, req.params.id]);
     res.json({ success: true, message: 'Game updated' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+  } catch (err) { res.status(500).json({ success: false, message: 'Server error' }); }
 });
 
-router.put('/games/:id/status', [
-  body('status').isIn(['open', 'closed'])
-], async (req, res) => {
-  try {
-    await db.query('UPDATE games SET status = ? WHERE id = ?', [req.body.status, req.params.id]);
-    res.json({ success: true, message: `Game ${req.body.status}` });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+router.put('/games/:id/status', [body('status').isIn(['open', 'closed'])], async (req, res) => {
+  try { await db.query('UPDATE games SET status = ? WHERE id = ?', [req.body.status, req.params.id]); res.json({ success: true, message: `Game ${req.body.status}` }); } catch (err) { res.status(500).json({ success: false, message: 'Server error' }); }
 });
 
 router.put('/games/:id/hide', async (req, res) => {
-  const { hide } = req.body;
-  try {
-    await db.query('UPDATE games SET is_hidden = ? WHERE id = ?', [hide ? 1 : 0, req.params.id]);
-    res.json({ success: true, message: `Game ${hide ? 'hidden' : 'visible'}` });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+  try { await db.query('UPDATE games SET is_hidden = ? WHERE id = ?', [req.body.hide ? 1 : 0, req.params.id]); res.json({ success: true, message: `Game ${req.body.hide ? 'hidden' : 'visible'}` }); } catch (err) { res.status(500).json({ success: false, message: 'Server error' }); }
 });
 
 router.delete('/games/:id', async (req, res) => {
-  try {
-    await db.query('DELETE FROM games WHERE id = ?', [req.params.id]);
-    res.json({ success: true, message: 'Game deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
+  try { await db.query('DELETE FROM games WHERE id = ?', [req.params.id]); res.json({ success: true, message: 'Game deleted successfully' }); } catch (err) { res.status(500).json({ success: false, message: 'Server error' }); }
 });
 
 // ─── DECLARE RESULT ───────────────────────────────────────────────────────────
-router.put('/games/:id/result', [
-  body('open_result').notEmpty().withMessage('Open result required'),
-  body('close_result').notEmpty().withMessage('Close result required')
-], async (req, res) => {
+router.put('/games/:id/result', [body('open_result').notEmpty().withMessage('Open result required'), body('close_result').notEmpty().withMessage('Close result required')], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
@@ -346,8 +249,7 @@ router.put('/games/:id/result', [
         await conn.query('UPDATE users SET winning_balance = winning_balance + ? WHERE id = ?', [winAmount, bid.user_id]);
         await conn.query("UPDATE bids SET status='win', win_amount=? WHERE id=?", [winAmount, bid.id]);
         await conn.query(
-          `INSERT INTO transactions (user_id, type, wallet_type, amount, description, reference_id, status)
-           VALUES (?, 'credit', 'winning_wallet', ?, ?, ?, 'completed')`,
+          `INSERT INTO transactions (user_id, type, wallet_type, amount, description, reference_id, status) VALUES (?, 'credit', 'winning_wallet', ?, ?, ?, 'completed')`,
           [bid.user_id, winAmount, `Won: Game result ${jodi_result}`, bid.id]
         );
         totalWinners++;
@@ -376,7 +278,6 @@ router.put('/games/:id/result', [
 // ══════════════════════════════════════════════════════════════
 //  DEPOSIT MANAGEMENT (REFERRAL BONUS TRIGGER YAHAN HAI)
 // ══════════════════════════════════════════════════════════════
-
 router.get('/deposits', async (req, res) => {
   try {
     const status = req.query.status || 'pending';
@@ -488,7 +389,6 @@ router.put('/deposits/:id', [
 // ══════════════════════════════════════════════════════════════
 //  WITHDRAWAL MANAGEMENT
 // ══════════════════════════════════════════════════════════════
-
 router.get('/withdrawals', async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -497,7 +397,7 @@ router.get('/withdrawals', async (req, res) => {
        JOIN users u ON d.user_id = u.id
        WHERE d.type = 'withdrawal' AND d.status = ?
        ORDER BY d.created_at DESC LIMIT 100`,
-      [status]
+      [req.query.status || 'pending']
     );
     res.json({ success: true, withdrawals: rows });
   } catch (err) {
@@ -554,7 +454,6 @@ router.put('/withdrawals/:id', [
 // ══════════════════════════════════════════════════════════════
 //  BIDS MANAGEMENT
 // ══════════════════════════════════════════════════════════════
-
 router.get('/bids', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -583,7 +482,6 @@ router.get('/bids', async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 //  SITE SETTINGS
 // ══════════════════════════════════════════════════════════════
-
 router.get('/settings', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT setting_key, setting_value FROM site_settings');
@@ -630,7 +528,6 @@ router.post('/settings', async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 //  NOTICES MANAGEMENT
 // ══════════════════════════════════════════════════════════════
-
 router.get('/notices', async (req, res) => {
   try {
     const [notices] = await db.query('SELECT * FROM notices ORDER BY created_at DESC');
@@ -670,7 +567,6 @@ router.delete('/notices/:id', async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 //  REFERRAL MANAGEMENT
 // ══════════════════════════════════════════════════════════════
-
 router.get('/referrals', async (req, res) => {
   try {
     const [rows] = await db.query(
