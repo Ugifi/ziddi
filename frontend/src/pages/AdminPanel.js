@@ -8,13 +8,25 @@ const API = 'https://ziddi-1-we11.onrender.com';
 
 function toIST(dateStr) {
   if (!dateStr) return '';
-  const utcStr = dateStr.toString().replace(' ', 'T') + 'Z';
-  const d = new Date(utcStr);
-  return d.toLocaleString('en-IN', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
-    timeZone: 'Asia/Kolkata'
-  });
+  
+  try {
+    let str = String(dateStr);
+    // Convert "YYYY-MM-DD HH:MM:SS" to ISO format "YYYY-MM-DDTHH:MM:SSZ"
+    if (!str.includes('T') && str.includes(' ')) {
+      str = str.replace(' ', 'T') + 'Z';
+    }
+    
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return '';
+
+    return d.toLocaleString('en-IN', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+      timeZone: 'Asia/Kolkata'
+    });
+  } catch (e) {
+    return '';
+  }
 }
 
 function apiCall(path, method = 'GET', body = null) {
