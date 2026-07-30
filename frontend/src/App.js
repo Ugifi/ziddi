@@ -541,26 +541,61 @@ export default function App() {
     try {
       const fresh = await fetchWallet();
       const currentBalance = fresh ? fresh.total : walletRef.current;
-      if (amount > currentBalance) { showToast(`Insufficient balance! Available: Rs.${currentBalance.toLocaleString()}`, 'err'); bidSubmittingRef.current = false; return; }
-      if (data.numbers) {
-        const results = await Promise.all(data.numbers.map(bet =>
-          apiCall('/api/games/bid','POST',{ game_id:selectedGame.id, game_type:selectedType.id, number:bet.num, amount:bet.amt, session:data.session||'open' })
-        ));
-        const failed = results.find(r => !r.success);
-        if (failed) { showToast(failed.message || 'Bid failed!', 'err'); await fetchWallet(); bidSubmittingRef.current = false; return; }
-      } else {
-        const res = await apiCall('/api/games/bid','POST',{ game_id:selectedGame.id, game_type:selectedType.id, number:data.number, amount:data.amount, session:data.session||'open' });
-        if (!res.success) { showToast(res.message || 'Bid failed!', 'err'); await fetchWallet(); bidSubmittingRef.current = false; return; }
+      if (amount > currentBalance) {
+        showToast(`Insufficient balance! Available: Rs.${currentBalance.toLocaleString()}`, 'err');
+        bidSubmittingRef.current = false;
+        return;
+      }
+
+      // ✅ BULK BID — ek hi API call (19 calls ki jagah 1)
+      if (data.__bulk) {
+        const result = await apiCall('/api/games/bid/bulk', 'POST', {
+          game_id:   selectedGame.id,
+          game_type: selectedType.id,   // selectedType — App.js ka sahi variable
+          session:   data.session,
+          bids:      data.numbers       // [{ num, amt }, ...]
+        });
+        if (result.success) {
+          showToast(`${result.bids_placed} bids placed! Rs.${result.total_amount} deducted.`);
+          await fetchWallet();
+          const cat = selectedGame?.game_category;
+          const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot':cat==='disawar'?'disawar':'home';
+          setPage(backPage); setSelectedGame(null); setSelectedType(null);
+        } else {
+          showToast(result.message || 'Bulk bid failed!', 'err');
+          await fetchWallet();
+        }
+        bidSubmittingRef.current = false;
+        return;
+      }
+
+      // ✅ SINGLE BID — purana logic as-is
+      const res = await apiCall('/api/games/bid', 'POST', {
+        game_id:   selectedGame.id,
+        game_type: selectedType.id,
+        number:    data.number,
+        amount:    data.amount,
+        session:   data.session || 'open'
+      });
+      if (!res.success) {
+        showToast(res.message || 'Bid failed!', 'err');
+        await fetchWallet();
+        bidSubmittingRef.current = false;
+        return;
       }
       await fetchWallet();
       showToast(`Bid Rs.${amount.toLocaleString()} placed!`);
       const cat = selectedGame?.game_category;
       const backPage = cat==='starline'?'starline':cat==='jackpot'?'jackpot':cat==='disawar'?'disawar':'home';
       setPage(backPage); setSelectedGame(null); setSelectedType(null);
-    } catch { await fetchWallet(); showToast('Network error! Dobara try karo.', 'err'); }
-    finally { bidSubmittingRef.current = false; }
-  };
 
+    } catch {
+      await fetchWallet();
+      showToast('Network error! Dobara try karo.', 'err');
+    } finally {
+      bidSubmittingRef.current = false;
+    }
+  };
  // NAYA — scroll reset add kiya
 const navigate = id => {
   setPage(id);
