@@ -821,11 +821,25 @@ export function WalletPage({ wallet, onAdd, onWith, user, navigate, apiCall }) {
   const [stats, setStats] = useState({ highest_win: 0, total_bids: 0, games_won: 0, avg_bid: 0 });
   const [showDeposit, setShowDeposit] = useState(false);
 
+  const [walletStats, setWalletStats] = useState({ total_deposited: 0, total_won: 0, total_withdrawn: 0 });
+
   useEffect(() => {
     if (apiCall) {
+      // Profile stats
       apiCall('/api/auth/profile').then(res => {
         if (res?.success && res?.user) {
           setStats({ highest_win: res.user.highest_win || 0, total_bids: res.user.total_bids || 0, games_won: res.user.games_won || 0, avg_bid: res.user.avg_bid || 0 });
+        }
+      }).catch(() => {});
+
+      // Wallet stats (total added, won, withdrawn)
+      apiCall('/api/wallet/balance').then(res => {
+        if (res?.success) {
+          setWalletStats({
+            total_deposited: res.total_deposited || 0,
+            total_won: res.total_won || 0,
+            total_withdrawn: res.total_withdrawn || 0,
+          });
         }
       }).catch(() => {});
     }
@@ -848,9 +862,9 @@ export function WalletPage({ wallet, onAdd, onWith, user, navigate, apiCall }) {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-around', borderTop: '1px solid rgba(255,255,255,0.15)', marginTop: 24, paddingTop: 16 }}>
           {[
-            { label: 'Total Added', val: '₹' + Number(user?.total_deposited || 0).toLocaleString('en-IN') },
-            { label: 'Total Won',   val: '₹' + Number(user?.total_won || 0).toLocaleString('en-IN') },
-            { label: 'Withdrawn',   val: '₹' + Number(user?.total_withdrawn || 0).toLocaleString('en-IN') },
+           { label: 'Total Added', val: '₹' + Number(walletStats.total_deposited || 0).toLocaleString('en-IN') },
+{ label: 'Total Won',   val: '₹' + Number(walletStats.total_won || 0).toLocaleString('en-IN') },
+{ label: 'Withdrawn',   val: '₹' + Number(walletStats.total_withdrawn || 0).toLocaleString('en-IN') },
           ].map((s, i, arr) => (
             <React.Fragment key={i}>
               <div style={{ textAlign: 'center' }}>
