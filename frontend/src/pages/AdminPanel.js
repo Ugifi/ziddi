@@ -564,6 +564,8 @@ export default function AdminPanel({ onLogout }) {
   const [deposits, setDeposits] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
   const [bids, setBids] = useState([]);
+  const [bidFilterDate, setBidFilterDate] = useState('');
+  const [bidFilterStatus, setBidFilterStatus] = useState('all');
   const [notices, setNotices] = useState([]);
   const [noticeMsg, setNoticeMsg] = useState('');
   const [newGame, setNewGame] = useState({ name: '', open_time: '', close_time: '' });
@@ -664,7 +666,7 @@ export default function AdminPanel({ onLogout }) {
     } else if (currentPage === 'withdrawals') {
       apiCall('/api/admin/withdrawals').then(d => { if (d.success) { setWithdrawals(d.withdrawals); setLastRefresh(new Date()); } done(); }).catch(done);
     } else if (currentPage === 'bids') {
-      apiCall('/api/admin/bids').then(d => { if (d.success) { setBids(d.bids); setLastRefresh(new Date()); } done(); }).catch(done);
+      apiCall('/api/admin/bids?limit=500').then(d => { if (d.success) { setBids(d.bids); setLastRefresh(new Date()); } done(); }).catch(done);
     } else if (currentPage === 'notices') {
       apiCall('/api/admin/notices').then(d => { if (d.success) { setNotices(d.notices || []); setLastRefresh(new Date()); } done(); }).catch(done);
     } else if (currentPage === 'settings') {
@@ -1072,11 +1074,59 @@ export default function AdminPanel({ onLogout }) {
         )}
 
         {/* ── BIDS ── */}
-        {!loading && page === 'bids' && (
-          <div>
-            {bids.length === 0
-              ? <div style={{ textAlign: 'center', color: C.textMuted, padding: 40, fontWeight: 700 }}>Koi bid nahi mili</div>
-              : bids.map(b => (
+        {!loading && page === 'bids' && (() => {
+          const today = new Date().toISOString().split('T')[0];
+          const filteredBids = bids.filter(b => {
+            if (bidFilterDate) {
+              const bidDate = new Date(b.created_at).toLocaleDateString('en-CA');
+              if (bidDate !== bidFilterDate) return false;
+            }
+            if (bidFilterStatus !== 'all' && b.status !== bidFilterStatus) return false;
+            return true;
+          });
+          return (
+            <div>
+              {/* Date Filter */}
+              <div style={{ ...B.card, marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.textSub, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>📅 Date Filter</div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <input
+                    type="date" value={bidFilterDate} max={today}
+                    onChange={e => setBidFilterDate(e.target.value)}
+                    style={{ flex: 1, background: C.inputBg, border: `2px solid ${C.inputBdr}`, borderRadius: 10, padding: '10px 12px', color: C.textMain, fontSize: 14, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  {bidFilterDate && (
+                    <button onClick={() => setBidFilterDate('')}
+                      style={{ padding: '10px 14px', background: C.dangerBg, border: `1.5px solid #FFCDD2`, borderRadius: 10, color: C.danger, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+                      ✕ Clear
+                    </button>
+                  )}
+                </div>
+                {bidFilterDate && (
+                  <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 10 }}>
+                    📅 {new Date(bidFilterDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })} ki bids
+                  </div>
+                )}
+                {/* Status Filter */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[['all', 'All'], ['pending', '⏳ Pending'], ['win', '🏆 Won'], ['loss', '💔 Lost']].map(([val, label]) => (
+                    <button key={val} onClick={() => setBidFilterStatus(val)}
+                      style={{ flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer', fontWeight: 800, fontSize: 11, background: bidFilterStatus === val ? `linear-gradient(135deg,${C.primary},#1976D2)` : C.inputBg, color: bidFilterStatus === val ? '#fff' : C.textMuted, border: bidFilterStatus === val ? 'none' : `1.5px solid ${C.cardBorder}`, transition: 'all 0.2s' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ fontSize: 12, color: C.textSub, fontWeight: 800, marginBottom: 10 }}>
+                {filteredBids.length} bids {bidFilterDate ? 'is date ke' : 'total'}
+              </div>
+
+              {filteredBids.length === 0 ? (
+                <div style={{ textAlign: 'center', color: C.textMuted, padding: 40, fontWeight: 700 }}>
+                  {bidFilterDate ? 'Is date pe koi bid nahi' : 'Koi bid nahi mili'}
+                </div>
+              ) : filteredBids.map(b => (
                 <div key={b.id} style={B.card}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div style={{ fontWeight: 900, color: C.textMain, fontSize: 15 }}>
@@ -1090,10 +1140,10 @@ export default function AdminPanel({ onLogout }) {
                   </div>
                   <div style={{ fontSize: 11, color: C.textMuted, marginTop: 10, fontWeight: 600 }}>📅 {toISTlocal(b.created_at)}</div>
                 </div>
-              ))
-            }
-          </div>
-        )}
+              ))}
+            </div>
+          );
+        })()}
 
         {/* ── DECLARE RESULT ── */}
         {!loading && page === 'results' && (
