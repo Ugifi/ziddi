@@ -666,7 +666,7 @@ export default function AdminPanel({ onLogout }) {
     } else if (currentPage === 'withdrawals') {
       apiCall('/api/admin/withdrawals').then(d => { if (d.success) { setWithdrawals(d.withdrawals); setLastRefresh(new Date()); } done(); }).catch(done);
     } else if (currentPage === 'bids') {
-      apiCall('/api/admin/bids?limit=500').then(d => { if (d.success) { setBids(d.bids); setLastRefresh(new Date()); } done(); }).catch(done);
+      apiCall('/api/admin/bids?limit=10000').then(d => { if (d.success) { setBids(d.bids); setLastRefresh(new Date()); } done(); }).catch(done);
     } else if (currentPage === 'notices') {
       apiCall('/api/admin/notices').then(d => { if (d.success) { setNotices(d.notices || []); setLastRefresh(new Date()); } done(); }).catch(done);
     } else if (currentPage === 'settings') {
@@ -1075,23 +1075,39 @@ export default function AdminPanel({ onLogout }) {
 
         {/* ── BIDS ── */}
         {!loading && page === 'bids' && (() => {
-          const today = new Date().toISOString().split('T')[0];
-          const filteredBids = bids.filter(b => {
-            if (bidFilterDate) {
-              const bidDate = new Date(b.created_at).toLocaleDateString('en-CA');
-              if (bidDate !== bidFilterDate) return false;
-            }
-            if (bidFilterStatus !== 'all' && b.status !== bidFilterStatus) return false;
-            return true;
-          });
-          return (
+         const today = new Date().toISOString().split('T')[0];
+
+// Last 7 days dates calculate karo
+const last7Days = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date();
+  d.setDate(d.getDate() - i);
+  return d.toISOString().split('T')[0];
+});
+
+const filteredBids = bids.filter(b => {
+  if (bidFilterDate === 'last7') {
+    let str = String(b.created_at);
+    if (!str.includes('T') && str.includes(' ')) str = str.replace(' ', 'T') + '+05:30';
+    const bidDate = new Date(str).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    if (!last7Days.includes(bidDate)) return false;
+  } else if (bidFilterDate) {
+    let str = String(b.created_at);
+    if (!str.includes('T') && str.includes(' ')) str = str.replace(' ', 'T') + '+05:30';
+    const bidDate = new Date(str).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    if (bidDate !== bidFilterDate) return false;
+  }
+  if (bidFilterStatus !== 'all' && b.status !== bidFilterStatus) return false;
+  return true;
+});
+
+return (
             <div>
               {/* Date Filter */}
               <div style={{ ...B.card, marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: C.textSub, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>📅 Date Filter</div>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   <input
-                    type="date" value={bidFilterDate} max={today}
+                    type="date" value={bidFilterDate === 'last7' ? '' : bidFilterDate} max={today}
                     onChange={e => setBidFilterDate(e.target.value)}
                     style={{ flex: 1, background: C.inputBg, border: `2px solid ${C.inputBdr}`, borderRadius: 10, padding: '10px 12px', color: C.textMain, fontSize: 14, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
                   />
@@ -1102,7 +1118,26 @@ export default function AdminPanel({ onLogout }) {
                     </button>
                   )}
                 </div>
-                {bidFilterDate && (
+                {/* Last 7 Days Button */}
+                <div style={{ marginBottom: 10 }}>
+                  <button
+                    onClick={() => setBidFilterDate(bidFilterDate === 'last7' ? '' : 'last7')}
+                    style={{
+                      padding: '9px 18px', borderRadius: 10, cursor: 'pointer', fontWeight: 800,
+                      fontSize: 12, background: bidFilterDate === 'last7'
+                        ? `linear-gradient(135deg,${C.primary},#1976D2)` : C.inputBg,
+                      color: bidFilterDate === 'last7' ? '#fff' : C.textMuted,
+                      border: bidFilterDate === 'last7' ? 'none' : `1.5px solid ${C.cardBorder}`,
+                    }}>
+                    📅 Last 7 Days {bidFilterDate === 'last7' ? '✓' : ''}
+                  </button>
+                </div>
+                {bidFilterDate === 'last7' && (
+                  <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 10 }}>
+                    📅 Last 7 Days ki bids
+                  </div>
+                )}
+                {bidFilterDate && bidFilterDate !== 'last7' && (
                   <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 10 }}>
                     📅 {new Date(bidFilterDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })} ki bids
                   </div>
@@ -1119,7 +1154,7 @@ export default function AdminPanel({ onLogout }) {
               </div>
 
               <div style={{ fontSize: 12, color: C.textSub, fontWeight: 800, marginBottom: 10 }}>
-                {filteredBids.length} bids {bidFilterDate ? 'is date ke' : 'total'}
+                {filteredBids.length} bids {bidFilterDate === 'last7' ? 'last 7 days ke' : bidFilterDate ? 'is date ke' : 'total (sab)'}
               </div>
 
               {filteredBids.length === 0 ? (
