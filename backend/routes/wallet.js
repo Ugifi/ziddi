@@ -94,7 +94,8 @@ router.post('/deposit', authMiddleware, uploadOptional, [
 
 // ─── WITHDRAWAL REQUEST ───────────────────────────────────────────────────────
 router.post('/withdraw', authMiddleware, [
-  body('amount').isFloat({ min: 1 }).withMessage('Valid amount required')
+  body('amount').isFloat({ min: 1 }).withMessage('Valid amount required'),
+  body('upi_id').notEmpty().withMessage('UPI ID required')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
@@ -121,15 +122,15 @@ router.post('/withdraw', authMiddleware, [
       return res.status(400).json({ success: false, message: `Insufficient winning balance. Available: ₹${winBalance}` });
     }
 
-    // Check pending withdrawal — DISABLED (multiple withdrawals allowed)
-    // const [pending] = await conn.query(
-    //   "SELECT id FROM deposit_requests WHERE user_id = ? AND type = 'withdrawal' AND status = 'pending'",
-    //   [req.user.id]
-    // );
-    // if (pending.length) {
-    //   await conn.rollback();
-    //   return res.status(400).json({ success: false, message: 'You already have a pending withdrawal request' });
-    // }
+    // Check pending withdrawal
+    const [pending] = await conn.query(
+      "SELECT id FROM deposit_requests WHERE user_id = ? AND type = 'withdrawal' AND status = 'pending'",
+      [req.user.id]
+    );
+    if (pending.length) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'You already have a pending withdrawal request' });
+    }
 
     // Deduct winning balance
     await conn.query('UPDATE users SET winning_balance = winning_balance - ? WHERE id = ?', [amount, req.user.id]);
