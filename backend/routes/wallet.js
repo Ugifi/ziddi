@@ -36,11 +36,33 @@ router.get('/balance', authMiddleware, async (req, res) => {
       'SELECT wallet_balance, winning_balance FROM users WHERE id = ?',
       [req.user.id]
     );
+
+    // Total deposited (approved deposits only)
+    const [deposited] = await db.query(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM deposit_requests WHERE user_id = ? AND type = 'deposit' AND status = 'approved'",
+      [req.user.id]
+    );
+
+    // Total won (from transactions)
+    const [won] = await db.query(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = 'credit' AND wallet_type = 'winning_wallet'",
+      [req.user.id]
+    );
+
+    // Total withdrawn (approved withdrawals)
+    const [withdrawn] = await db.query(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM deposit_requests WHERE user_id = ? AND type = 'withdrawal' AND status = 'approved'",
+      [req.user.id]
+    );
+
     res.json({
       success: true,
       wallet_balance: parseFloat(rows[0].wallet_balance),
       winning_balance: parseFloat(rows[0].winning_balance),
-      total: parseFloat(rows[0].wallet_balance) + parseFloat(rows[0].winning_balance)
+      total: parseFloat(rows[0].wallet_balance) + parseFloat(rows[0].winning_balance),
+      total_deposited: parseFloat(deposited[0].total),
+      total_won: parseFloat(won[0].total),
+      total_withdrawn: parseFloat(withdrawn[0].total)
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
