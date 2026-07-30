@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SINGLE_PANAS, DOUBLE_PANAS, TRIPLE_PANAS } from '../data/gameData';
 
 const DIGITS = [0,1,2,3,4,5,6,7,8,9];
@@ -27,6 +27,69 @@ function AmtInput({ amt, setAmt, chips, label = 'Bid Amount (Min ₹10)' }) {
   );
 }
 
+// ── FIXED: Scroll-preserving grids ──
+function NumGrid({ selected, onSelect }) {
+  return (
+    <div className="bf-num-grid">
+      {DIGITS.map(d => (
+        <div key={d} className={`bf-nchip${selected === String(d) ? ' active' : ''}`} onClick={() => onSelect(String(d))}>{d}</div>
+      ))}
+    </div>
+  );
+}
+
+function JodiGrid({ selected, onSelect }) {
+  const scrollRef = useRef(null);
+  const scrollPos = useRef(0);
+
+  // Save scroll before re-render
+  const handleClick = (j) => {
+    if (scrollRef.current) scrollPos.current = scrollRef.current.scrollTop;
+    onSelect(j);
+  };
+
+  // Restore scroll after re-render
+  useEffect(() => {
+    if (scrollRef.current && scrollPos.current > 0) {
+      scrollRef.current.scrollTop = scrollPos.current;
+    }
+  });
+
+  return (
+    <div className="bf-jodi-scroll" ref={scrollRef}>
+      <div className="bf-jodi-grid">
+        {JODIS.map(j => (
+          <div key={j} className={`bf-jchip${selected === j ? ' active' : ''}`} onClick={() => handleClick(j)}>{j}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PanaGrid({ panas, selected, onSelect }) {
+  const scrollRef = useRef(null);
+  const scrollPos = useRef(0);
+
+  const handleClick = (p) => {
+    if (scrollRef.current) scrollPos.current = scrollRef.current.scrollTop;
+    onSelect(p);
+  };
+
+  useEffect(() => {
+    if (scrollRef.current && scrollPos.current > 0) {
+      scrollRef.current.scrollTop = scrollPos.current;
+    }
+  });
+
+  return (
+    <div className="bf-pana-grid" ref={scrollRef}>
+      {panas.map(p => (
+        <div key={p} className={`bf-pchip${selected === p ? ' active' : ''}`} onClick={() => handleClick(p)}>{p}</div>
+      ))}
+    </div>
+  );
+}
+
 export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const [num, setNum] = useState('');
   const [num2, setNum2] = useState('');
@@ -41,23 +104,10 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const id = gameType.id;
   const nt = gameType.numType;
 
-  // ✅ TIME-BASED SESSION LOGIC (HomeScreen jaisa 30 sec delay)
-  const isTimePassed = (timeStr, delaySeconds = 30) => {
-    if (!timeStr) return false;
-    try {
-      const now = new Date();
-      const [h, m, s] = timeStr.split(':').map(Number);
-      const gameDate = new Date();
-      gameDate.setHours(h, m, s || 0, 0);
-      const diff = (now.getTime() - gameDate.getTime()) / 1000;
-      return diff >= delaySeconds;
-    } catch { return false; }
-  };
+  // ── SESSION LOGIC ────────────────────────────────────────────
+  const openDeclared  = !!game.open_result;
+  const closeDeclared = !!game.close_result;
 
-  const openDeclared  = !!game.open_result && isTimePassed(game.open_time, 30);
-  const closeDeclared = !!game.close_result && isTimePassed(game.close_time, 30);
-
-  // default session: agar open declared hai toh 'close', warna 'open'
   const defaultSession = openDeclared ? 'close' : 'open';
   const [openClose, setOpenClose] = useState(defaultSession);
 
@@ -103,7 +153,6 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const handleSubmit = async () => {
     if (submitting) return;
 
-    // ── FRONTEND GUARD: open session block ───────────────────
     if (openDeclared && openClose === 'open') {
       alert('Open result declare ho chuka hai. Sirf CLOSE session pe bet laga sakte ho.');
       return;
@@ -182,33 +231,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
     </button>
   );
 
-  const NumGrid = ({ selected, onSelect }) => (
-    <div className="bf-num-grid">
-      {DIGITS.map(d => (
-        <div key={d} className={`bf-nchip${selected === String(d) ? ' active' : ''}`} onClick={() => onSelect(String(d))}>{d}</div>
-      ))}
-    </div>
-  );
-
-  const JodiGrid = ({ selected, onSelect }) => (
-    <div className="bf-jodi-scroll">
-      <div className="bf-jodi-grid">
-        {JODIS.map(j => (
-          <div key={j} className={`bf-jchip${selected === j ? ' active' : ''}`} onClick={() => onSelect(j)}>{j}</div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const PanaGrid = ({ panas, selected, onSelect }) => (
-    <div className="bf-pana-grid">
-      {panas.map(p => (
-        <div key={p} className={`bf-pchip${selected === p ? ' active' : ''}`} onClick={() => onSelect(p)}>{p}</div>
-      ))}
-    </div>
-  );
-
-  // ── SESSION TOGGLE: open declared hone ke baad open disable ──
+  // ── SESSION TOGGLE ──
   const SessionToggle = () => (
     <div className="bf-fg">
       <label className="bf-label">Select Session</label>
@@ -404,7 +427,7 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
         }
         .bf-session-btn:hover { border-color: #1976D2; }
         .bf-session-btn.active { background: linear-gradient(135deg,#1565C0,#1976D2); color: #fff; border-color: #1565C0; }
-        .bf-session-btn.disabled { opacity: 0.4; cursor: 'not-allowed'; }
+        .bf-session-btn.disabled { opacity: 0.4; cursor: not-allowed; }
         .bf-session-btn.disabled:hover { border-color: #BBDEFB; }
 
         .bf-add-btn {
