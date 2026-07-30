@@ -463,7 +463,7 @@ router.put('/withdrawals/:id', [
 router.get('/bids', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 500;
+    const limit = parseInt(req.query.limit) || 10000;
     const offset = (page - 1) * limit;
     const game_id = req.query.game_id || null;
 
