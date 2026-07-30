@@ -151,41 +151,52 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const totalAmt = bets.reduce((a, b) => a + b.amt, 0);
 
   const handleSubmit = async () => {
-    if (submitting) return;
+  if (submitting) return;
 
-    if (openDeclared && openClose === 'open') {
-      alert('Open result declare ho chuka hai. Sirf CLOSE session pe bet laga sakte ho.');
-      return;
-    }
-    if (openDeclared && closeDeclared) {
-      alert('Aaj ke liye game band ho chuka hai. Dono results declare ho gaye hain.');
-      return;
-    }
+  if (openDeclared && openClose === 'open') {
+    alert('Open result declare ho chuka hai. Sirf CLOSE session pe bet laga sakte ho.');
+    return;
+  }
+  if (openDeclared && closeDeclared) {
+    alert('Aaj ke liye game band ho chuka hai. Dono results declare ho gaye hain.');
+    return;
+  }
 
-    setSubmitting(true);
-    try {
-      const commonData = { session: openClose };
-      if (isBulkType) {
-        if (!bets.length) { setSubmitting(false); return; }
-        await onSubmit({ numbers: bets, totalAmt, ...commonData });
-      } else if (id === 'odd_even') {
-        if (!oddEven || !amt || Number(amt) < 10) { setSubmitting(false); return; }
-        await onSubmit({ number: oddEven, amount: Number(amt), ...commonData });
-      } else if (id === 'half_sangam_a' || id === 'half_sangam_b' || id === 'full_sangam') {
-        if (!num || !num2 || !amt || Number(amt) < 10) { setSubmitting(false); return; }
-        await onSubmit({ number: `${num}-${num2}`, amount: Number(amt), ...commonData });
-      } else if (id === 'two_digit_pana') {
-        if (!num || !num2 || !amt || Number(amt) < 10) { setSubmitting(false); return; }
-        await onSubmit({ number: `${num}|${num2}`, amount: Number(amt), ...commonData });
-      } else {
-        if (!num || !amt || Number(amt) < 10) { setSubmitting(false); return; }
-        await onSubmit({ number: num, amount: Number(amt), ...commonData });
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  setSubmitting(true);
+  try {
+    const commonData = { session: openClose };
 
+    if (isBulkType) {
+      // ✅ BULK — ek hi API call
+      if (!bets.length) { setSubmitting(false); return; }
+
+      await onSubmit({
+        __bulk: true,          // flag — App.js ko pata chalega
+        numbers: bets,
+        totalAmt,
+        ...commonData
+      });
+
+    } else if (id === 'odd_even') {
+      if (!oddEven || !amt || Number(amt) < 10) { setSubmitting(false); return; }
+      await onSubmit({ number: oddEven, amount: Number(amt), ...commonData });
+
+    } else if (id === 'half_sangam_a' || id === 'half_sangam_b' || id === 'full_sangam') {
+      if (!num || !num2 || !amt || Number(amt) < 10) { setSubmitting(false); return; }
+      await onSubmit({ number: `${num}-${num2}`, amount: Number(amt), ...commonData });
+
+    } else if (id === 'two_digit_pana') {
+      if (!num || !num2 || !amt || Number(amt) < 10) { setSubmitting(false); return; }
+      await onSubmit({ number: `${num}|${num2}`, amount: Number(amt), ...commonData });
+
+    } else {
+      if (!num || !amt || Number(amt) < 10) { setSubmitting(false); return; }
+      await onSubmit({ number: num, amount: Number(amt), ...commonData });
+    }
+  } finally {
+    setSubmitting(false);
+  }
+};
   const WinInfo = () => (
     <div className="bf-infobox">
       Bid: <strong>₹{Number(amt||0).toLocaleString()}</strong> &nbsp;→&nbsp;
