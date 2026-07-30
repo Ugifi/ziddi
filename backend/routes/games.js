@@ -57,7 +57,6 @@ router.get('/', async (req, res) => {
   try {
     const category = req.query.category || null;
 
-    // Sirf aaj ki date ka result dikhana (2 AM Reset Logic)
     const matkaDate = getMatkaDate();
     let query = `SELECT id, name, game_category, open_time, close_time, result_time, status,
                         CASE WHEN result_date = ? THEN open_result ELSE NULL END as open_result,
@@ -83,20 +82,6 @@ router.get('/', async (req, res) => {
     res.json({ success: true, games, game_types: gameTypes });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
-// ─── GET SINGLE GAME ──────────────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      'SELECT * FROM games WHERE id = ? AND status != "deleted"',
-      [req.params.id]
-    );
-    if (!rows.length) return res.status(404).json({ success: false, message: 'Game not found' });
-    res.json({ success: true, game: rows[0] });
-  } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
@@ -129,7 +114,7 @@ router.post('/bid', authMiddleware, [
   try {
     await conn.beginTransaction();
 
-    const [games] = await conn.query('SELECT * FROM games WHERE id = ? FOR UPDATE', [game_id]);
+    const [games] = await conn.query('SELECT * FROM games WHERE id = ?', [game_id]);
     if (!games.length) {
       await conn.rollback();
       return res.status(404).json({ success: false, message: 'Game not found' });
@@ -137,10 +122,9 @@ router.post('/bid', authMiddleware, [
 
     const game = games[0];
 
-    // ── CLOSE TIME CHECK (Strict Auto-Close Logic) ───────────────────────────
     const now = new Date();
-    const currentTime = now.toTimeString().split(' ')[0]; // "HH:MM:SS"
-    
+    const currentTime = now.toTimeString().split(' ')[0];
+
     if (session === 'open' && currentTime >= game.open_time) {
       await conn.rollback();
       return res.status(400).json({ success: false, message: 'Open Betting Time is Over!' });
@@ -149,17 +133,13 @@ router.post('/bid', authMiddleware, [
       await conn.rollback();
       return res.status(400).json({ success: false, message: 'Close Betting Time is Over!' });
     }
-    // ──────────────────────────────────────────────────────────────────────────
 
-    // ✅ 2 AM DATE CHECK & TIME CHECK
     const matkaDate = getMatkaDate();
     const isTodayResult = game.result_date === matkaDate;
-    
-    // Agar DB mein result pada hai, par time nahi hua, toh usko declared nahi manna
+
     const openDeclared  = isTodayResult && !!game.open_result && currentTime >= game.open_time;
     const closeDeclared = isTodayResult && !!game.close_result && currentTime >= game.close_time;
 
-    // State 3: dono result aa gaye → band
     if (openDeclared && closeDeclared) {
       await conn.rollback();
       return res.status(400).json({
@@ -168,7 +148,6 @@ router.post('/bid', authMiddleware, [
       });
     }
 
-    // Game status check (admin ne manually band kiya ho)
     if (game.status !== 'open') {
       await conn.rollback();
       return res.status(400).json({
@@ -177,7 +156,6 @@ router.post('/bid', authMiddleware, [
       });
     }
 
-    // State 2: open result aa gaya → sirf close session allow
     if (openDeclared && !closeDeclared) {
       if (session === 'open') {
         await conn.rollback();
@@ -188,7 +166,6 @@ router.post('/bid', authMiddleware, [
       }
     }
 
-    // ── BID AMOUNT LIMITS ────────────────────────────────────────────────────
     const gameMinBid = game.min_bid || minBid;
     const gameMaxBid = game.max_bid || maxBid;
     if (bidAmount < gameMinBid) {
@@ -200,7 +177,6 @@ router.post('/bid', authMiddleware, [
       return res.status(400).json({ success: false, message: `Maximum bid for this game: ₹${gameMaxBid}` });
     }
 
-    // ── BALANCE CHECK ────────────────────────────────────────────────────────
     const [users] = await conn.query(
       'SELECT wallet_balance, winning_balance FROM users WHERE id = ? FOR UPDATE',
       [req.user.id]
@@ -218,7 +194,6 @@ router.post('/bid', authMiddleware, [
       });
     }
 
-    // wallet_balance se pehle kaato, phir winning_balance se
     let remainingDeduction = bidAmount;
     let walletDeducted = 0;
     let winDeducted    = 0;
@@ -285,6 +260,148 @@ router.post('/bid', authMiddleware, [
   }
 });
 
+// ─── BULK BID ─────────────────────────────────────────────────────────────────
+router.post('/bid/bulk', authMiddleware, async (req, res) => {
+  const { bids, session, game_id, game_type } = req.body;
+
+  if (!Array.isArray(bids) || bids.length === 0)
+    return res.status(400).json({ success: false, message: 'Bids array required' });
+  if (bids.length > 100)
+    return res.status(400).json({ success: false, message: 'Max 100 bids at once' });
+
+  const minBid = parseFloat(process.env.MIN_BID_AMOUNT || 10);
+  const maxBid = parseFloat(process.env.MAX_BID_AMOUNT || 10000);
+
+  if (!GAME_TYPES[game_type])
+    return res.status(400).json({ success: false, message: 'Invalid game type: ' + game_type });
+
+  for (const bid of bids) {
+    if (!bid.num || !bid.amt)
+      return res.status(400).json({ success: false, message: 'Invalid bid data' });
+    const a = parseFloat(bid.amt);
+    if (isNaN(a) || a < minBid || a > maxBid)
+      return res.status(400).json({ success: false, message: `Amount ₹${minBid}–₹${maxBid} hona chahiye` });
+  }
+
+  const totalAmount = bids.reduce((s, b) => s + parseFloat(b.amt), 0);
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [games] = await conn.query('SELECT * FROM games WHERE id = ?', [game_id]);
+    if (!games.length) { await conn.rollback(); return res.status(404).json({ success: false, message: 'Game not found' }); }
+    const game = games[0];
+
+    if (game.status !== 'open') {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: `Game ${game.status} hai` });
+    }
+
+    const now = new Date();
+    const currentTime = now.toTimeString().split(' ')[0];
+    const matkaDate = getMatkaDate();
+
+    if (session === 'open' && currentTime >= game.open_time) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'Open Betting Time is Over!' });
+    }
+    if (session === 'close' && currentTime >= game.close_time) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'Close Betting Time is Over!' });
+    }
+
+    const isTodayResult = game.result_date === matkaDate;
+    const openDeclared  = isTodayResult && !!game.open_result && currentTime >= game.open_time;
+    const closeDeclared = isTodayResult && !!game.close_result && currentTime >= game.close_time;
+
+    if (openDeclared && closeDeclared) {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'Game closed. Results declared.' });
+    }
+    if (openDeclared && session === 'open') {
+      await conn.rollback();
+      return res.status(400).json({ success: false, message: 'Only Close session allowed now.' });
+    }
+
+    const [users] = await conn.query(
+      'SELECT wallet_balance, winning_balance FROM users WHERE id = ? FOR UPDATE',
+      [req.user.id]
+    );
+    const user = users[0];
+    const walletBal = parseFloat(user.wallet_balance);
+    const winBal    = parseFloat(user.winning_balance);
+    const totalBal  = walletBal + winBal;
+
+    if (totalBal < totalAmount) {
+      await conn.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient balance. Available: ₹${totalBal.toFixed(2)}, Required: ₹${totalAmount.toFixed(2)}`
+      });
+    }
+
+    let walletDeducted = 0, winDeducted = 0;
+    if (walletBal >= totalAmount) {
+      walletDeducted = totalAmount;
+    } else {
+      walletDeducted = walletBal;
+      winDeducted    = totalAmount - walletBal;
+    }
+
+    await conn.query(
+      'UPDATE users SET wallet_balance = wallet_balance - ?, winning_balance = winning_balance - ? WHERE id = ?',
+      [walletDeducted, winDeducted, req.user.id]
+    );
+
+    const payout = GAME_TYPES[game_type].payout;
+    const categoryLabel = game.game_category === 'starline' ? '⭐ Starline' :
+                          game.game_category === 'disawar'  ? '🎰 Disawar'  : '';
+
+    const placeholders = bids.map(() => `(?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CONVERT_TZ(NOW(), '+00:00', '+05:30'))`).join(',');
+    const values = bids.flatMap(bid => {
+      const a = parseFloat(bid.amt);
+      return [req.user.id, game_id, game_type, session, bid.num, a, a * payout, 0, 0];
+    });
+
+    await conn.query(
+      `INSERT INTO bids (user_id, game_id, game_type, session, number, amount, potential_winning, wallet_deducted, winning_deducted, status, created_at) VALUES ${placeholders}`,
+      values
+    );
+
+    await conn.query(
+      `INSERT INTO transactions (user_id, type, wallet_type, amount, description, status)
+       VALUES (?, 'debit', 'wallet', ?, ?, 'completed')`,
+      [req.user.id, totalAmount, `Bulk Bid: ${categoryLabel} ${game.name} | ${GAME_TYPES[game_type].name} | ${bids.length} bets`]
+    );
+
+    await conn.commit();
+
+    const [updatedUser] = await db.query(
+      'SELECT wallet_balance, winning_balance FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: `${bids.length} bids placed successfully!`,
+      total_amount: totalAmount,
+      bids_placed: bids.length,
+      new_balance: {
+        wallet_balance:  parseFloat(updatedUser[0].wallet_balance),
+        winning_balance: parseFloat(updatedUser[0].winning_balance)
+      }
+    });
+
+  } catch (err) {
+    await conn.rollback();
+    console.error('Bulk bid error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  } finally {
+    conn.release();
+  }
+});
+
 // ─── MY BIDS ──────────────────────────────────────────────────────────────────
 router.get('/bids/my', authMiddleware, async (req, res) => {
   try {
@@ -338,22 +455,6 @@ router.get('/bids/my', authMiddleware, async (req, res) => {
   }
 });
 
-// ─── GAME RESULTS ─────────────────────────────────────────────────────────────
-router.get('/:id/results', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT g.id, g.name, g.game_category, g.open_result, g.close_result, g.jodi_result,
-              g.result_declared_at, g.open_time, g.close_time
-       FROM games g WHERE g.id = ?`,
-      [req.params.id]
-    );
-    if (!rows.length) return res.status(404).json({ success: false, message: 'Game not found' });
-    res.json({ success: true, result: rows[0] });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
-  }
-});
-
 // ─── PAST RESULTS ─────────────────────────────────────────────────────────────
 router.get('/results/history', async (req, res) => {
   try {
@@ -365,6 +466,36 @@ router.get('/results/history', async (req, res) => {
       [limit]
     );
     res.json({ success: true, results: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ─── GET SINGLE GAME ──────────────────────────────────────────────────────────
+router.get('/:id', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT * FROM games WHERE id = ? AND status != "deleted"',
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Game not found' });
+    res.json({ success: true, game: rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ─── GAME RESULTS ─────────────────────────────────────────────────────────────
+router.get('/:id/results', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT g.id, g.name, g.game_category, g.open_result, g.close_result, g.jodi_result,
+              g.result_declared_at, g.open_time, g.close_time
+       FROM games g WHERE g.id = ?`,
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Game not found' });
+    res.json({ success: true, result: rows[0] });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
