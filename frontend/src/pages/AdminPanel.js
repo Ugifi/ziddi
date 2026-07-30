@@ -10,9 +10,11 @@ function toIST(dateStr) {
   if (!dateStr) return '';
   try {
     let str = String(dateStr);
-    // MySQL datetime "2026-07-29 10:33:00" → UTC treat karo
+    // Sab UTC mein stored hai — 'Z' lagao
     if (!str.includes('T') && str.includes(' ')) {
       str = str.replace(' ', 'T') + 'Z';
+    } else if (str.includes('T') && !str.includes('+') && !str.endsWith('Z')) {
+      str = str + 'Z';
     }
     const d = new Date(str);
     if (isNaN(d.getTime())) return '';
@@ -23,6 +25,26 @@ function toIST(dateStr) {
     });
   } catch (e) { return ''; }
 }
+function toISTlocal(dateStr) {
+  if (!dateStr) return '';
+  try {
+    let str = String(dateStr);
+    if (!str.includes('T') && str.includes(' ')) {
+      str = str.replace(' ', 'T') + '+05:30';
+    } else if (str.includes('T') && !str.includes('+') && !str.endsWith('Z')) {
+      str = str + '+05:30';
+    }
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true
+    });
+  } catch (e) { return ''; }
+}
+// NAYA — timeout + retry wala
+
 // NAYA — timeout + retry wala
 async function apiCall(path, method = 'GET', body = null, retries = 2) {
   const token = localStorage.getItem('mk_token');
@@ -1066,7 +1088,7 @@ export default function AdminPanel({ onLogout }) {
                     Game: <strong style={{ color: C.primary }}>{b.game_name}</strong> · Session: <strong style={{ color: C.textSub }}>{b.session?.toUpperCase() || 'N/A'}</strong> · Type: <strong>{b.game_type}</strong><br />
                     Number: <strong style={{ fontSize: 15 }}>{b.number}</strong> · Amount: <strong style={{ color: C.success, fontSize: 15 }}>₹{Number(b.amount).toLocaleString()}</strong>
                   </div>
-                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 10, fontWeight: 600 }}>📅 {toIST(b.created_at)}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 10, fontWeight: 600 }}>📅 {toISTlocal(b.created_at)}</div>
                 </div>
               ))
             }
