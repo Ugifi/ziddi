@@ -289,7 +289,7 @@ router.post('/bid', authMiddleware, [
 router.get('/bids/my', authMiddleware, async (req, res) => {
   try {
     const page   = parseInt(req.query.page)  || 1;
-    const limit  = parseInt(req.query.limit) || 20;
+    const limit  = parseInt(req.query.limit) || 500;
     const offset = (page - 1) * limit;
     const status = req.query.status || null;
 
