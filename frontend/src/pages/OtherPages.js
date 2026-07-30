@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 // ── BLUE THEME SHARED STYLES ──
 const B = {
   page:      { background: '#eef2f7', minHeight: '100vh', paddingBottom: 80, color: '#222', fontFamily: '"Nunito", "Segoe UI", sans-serif' },
@@ -406,10 +407,12 @@ export function BidsPage({ apiCall }) {
   const [bids, setBids] = useState([]);
   const [summary, setSummary] = useState({ total_bids: 0, won_bids: 0, lost_bids: 0, pending_bids: 0, total_win_amount: 0 });
   const [loading, setLoading] = useState(true);
+  const [filterDate, setFilterDate] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
     if (apiCall) {
-      apiCall('/api/games/bids/my').then(res => {
+      apiCall('/api/games/bids/my?limit=500').then(res => {
         if (res.success) {
           if (res.bids) setBids(res.bids);
           if (res.summary) setSummary(res.summary);
@@ -427,6 +430,20 @@ export function BidsPage({ apiCall }) {
     { icon: '⏳', val: summary.pending_bids || 0, label: 'Pending',    color: '#f0a500' },
   ];
 
+  // ── FILTER LOGIC ──
+  const filteredBids = bids.filter(b => {
+    // Date filter
+    if (filterDate) {
+      const bidDate = new Date(b.created_at).toLocaleDateString('en-CA'); // YYYY-MM-DD
+      if (bidDate !== filterDate) return false;
+    }
+    // Status filter
+    if (filterStatus !== 'all' && b.status !== filterStatus) return false;
+    return true;
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+
   return (
     <div style={B.page}>
       <SubHeader title="🎯 My Bids" />
@@ -443,14 +460,60 @@ export function BidsPage({ apiCall }) {
         <span style={{ color: '#1e8a3c', fontWeight: 800, fontSize: 14 }}>💰 Total Winnings</span>
         <span style={{ color: '#1e8a3c', fontWeight: 900, fontSize: 18 }}>₹{winAmt.toLocaleString('en-IN')}</span>
       </div>
-      <div style={{ padding: '16px 12px 8px', fontSize: 12, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5 }}>🎮 Recent Bids</div>
+
+      {/* ── FILTERS ── */}
+      <div style={{ padding: '14px 12px 0' }}>
+        {/* Date Filter */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6 }}>📅 Date Filter</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="date"
+              value={filterDate}
+              max={today}
+              onChange={e => setFilterDate(e.target.value)}
+              style={{ flex: 1, background: '#fff', border: '2px solid #d0daea', borderRadius: 10, padding: '10px 12px', color: '#0d1f40', fontSize: 14, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
+            />
+            {filterDate && (
+              <button onClick={() => setFilterDate('')}
+                style={{ padding: '10px 14px', background: '#fdecea', border: '1.5px solid #f5c6cb', borderRadius: 10, color: '#c0392b', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+                ✕ Clear
+              </button>
+            )}
+          </div>
+          {filterDate && (
+            <div style={{ fontSize: 12, color: '#2a6dd9', fontWeight: 700, marginTop: 6 }}>
+              📅 {new Date(filterDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })} ke bids dikh rahe hain
+            </div>
+          )}
+        </div>
+
+        {/* Status Filter */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+          {[['all', 'All'], ['pending', '⏳ Pending'], ['win', '🏆 Won'], ['loss', '💔 Lost']].map(([val, label]) => (
+            <button key={val} onClick={() => setFilterStatus(val)}
+              style={{ flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer', fontWeight: 800, fontSize: 11, background: filterStatus === val ? 'linear-gradient(135deg,#1e4fa0,#2a6dd9)' : '#fff', color: filterStatus === val ? '#fff' : '#8a9bb5', border: filterStatus === val ? 'none' : '1.5px solid #e2e9f4', transition: 'all 0.2s' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: '12px 12px 8px', fontSize: 12, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, display: 'flex', justifyContent: 'space-between' }}>
+        <span>🎮 {filterDate ? 'Filtered' : 'Recent'} Bids</span>
+        <span style={{ color: '#8a9bb5', fontWeight: 600 }}>{filteredBids.length} bids</span>
+      </div>
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: 50, color: '#8a9bb5' }}>⏳ Loading bids...</div>
-      ) : bids.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 50, color: '#8a9bb5' }}>📭 No bids yet</div>
+      ) : filteredBids.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 50, color: '#8a9bb5' }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{filterDate ? 'Is date pe koi bid nahi' : 'No bids yet'}</div>
+        </div>
       ) : (
         <div style={{ padding: '0 12px' }}>
-          {bids.map(b => {
+          {filteredBids.map(b => {
             const amount = Number(b.amount || 0);
             const winning = Number(b.win_amount || b.potential_winning || 0);
             const clr = b.status === 'win' ? '#1e8a3c' : b.status === 'loss' ? '#c0392b' : '#f0a500';
@@ -482,6 +545,7 @@ export function TxnsPage({ apiCall, navigate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
   const [filter, setFilter]   = useState('all');
+  const [filterDate, setFilterDate] = useState('');
 
   useEffect(() => { fetchTxns(); }, []);
 
@@ -508,9 +572,22 @@ export function TxnsPage({ apiCall, navigate }) {
     return ['deposit', 'winning', 'win', 'refund', 'bonus', 'referral'].includes(tx.type?.toLowerCase());
   };
 
-  const filtered = filter === 'all' ? txns : filter === 'credit' ? txns.filter(t => isCredit(t)) : txns.filter(t => !isCredit(t));
+  // ── FILTER LOGIC ──
+  const filtered = txns.filter(t => {
+    if (filter !== 'all') {
+      if (filter === 'credit' && !isCredit(t)) return false;
+      if (filter === 'debit' && isCredit(t)) return false;
+    }
+    if (filterDate) {
+      const txDate = new Date(t.created_at).toLocaleDateString('en-CA');
+      if (txDate !== filterDate) return false;
+    }
+    return true;
+  });
+
   const totalCredit = txns.filter(t => isCredit(t)).reduce((a, t) => a + Math.abs(Number(t.amount || 0)), 0);
   const totalDebit  = txns.filter(t => !isCredit(t)).reduce((a, t) => a + Math.abs(Number(t.amount || 0)), 0);
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <div style={B.page}>
@@ -529,14 +606,47 @@ export function TxnsPage({ apiCall, navigate }) {
           </div>
         </div>
       )}
-      <div style={{ display: 'flex', gap: 10, padding: '16px 12px' }}>
+
+      {/* ── DATE FILTER ── */}
+      <div style={{ padding: '14px 12px 0' }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#2a6dd9', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6 }}>📅 Date Filter</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          <input
+            type="date"
+            value={filterDate}
+            max={today}
+            onChange={e => setFilterDate(e.target.value)}
+            style={{ flex: 1, background: '#fff', border: '2px solid #d0daea', borderRadius: 10, padding: '10px 12px', color: '#0d1f40', fontSize: 14, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
+          />
+          {filterDate && (
+            <button onClick={() => setFilterDate('')}
+              style={{ padding: '10px 14px', background: '#fdecea', border: '1.5px solid #f5c6cb', borderRadius: 10, color: '#c0392b', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+              ✕ Clear
+            </button>
+          )}
+        </div>
+        {filterDate && (
+          <div style={{ fontSize: 12, color: '#2a6dd9', fontWeight: 700, marginBottom: 8 }}>
+            📅 {new Date(filterDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })} ki transactions
+          </div>
+        )}
+      </div>
+
+      {/* ── TYPE FILTER ── */}
+      <div style={{ display: 'flex', gap: 10, padding: '0 12px 12px' }}>
         {[['all', 'All'], ['credit', 'Credit ⬆️'], ['debit', 'Debit ⬇️']].map(([val, label]) => (
           <button key={val} onClick={() => setFilter(val)} style={{ flex: 1, padding: '10px 0', borderRadius: 12, cursor: 'pointer', fontWeight: 800, fontSize: 12, textTransform: 'uppercase', background: filter === val ? 'linear-gradient(135deg,#1e4fa0,#2a6dd9)' : '#fff', color: filter === val ? '#fff' : '#8a9bb5', border: filter === val ? 'none' : '1.5px solid #e2e9f4', transition: 'all 0.2s', boxShadow: filter === val ? '0 4px 12px rgba(30,79,160,0.25)' : 'none' }}>{label}</button>
         ))}
       </div>
+
       {loading && <div style={{ textAlign: 'center', padding: 60, color: '#8a9bb5' }}>⏳ Loading...</div>}
       {!loading && error && <div style={{ textAlign: 'center', padding: 40, color: '#c0392b' }}>{error}</div>}
-      {!loading && !error && filtered.length === 0 && <div style={{ textAlign: 'center', padding: 60, color: '#8a9bb5' }}>📭 No transactions found</div>}
+      {!loading && !error && filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 60, color: '#8a9bb5' }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{filterDate ? 'Is date pe koi transaction nahi' : 'No transactions found'}</div>
+        </div>
+      )}
       <div style={{ padding: '0 12px' }}>
         {filtered.map((tx, i) => {
           const credit = isCredit(tx);
@@ -562,7 +672,6 @@ export function TxnsPage({ apiCall, navigate }) {
     </div>
   );
 }
-
 // ── REFERRAL PAGE ──
 export function ReferralPage({ apiCall, user, onBack }) {
   const [referralData, setReferralData] = useState({ referral_code: '', total_referrals: 0, pending_bonus: 0, total_earned: 0, referrals: [] });
