@@ -462,7 +462,7 @@ export function WithdrawModal({ wallet, onClose, onSuccess }) {
             <div style={{ fontSize: 40, marginBottom: 10 }}>⏳</div>
             Withdrawal <strong style={{ fontSize: 16 }}>₹{Number(amt).toLocaleString()}</strong> request bheja gaya!<br />
             Method: <strong>{method === 'upi' ? `UPI — ${upiId}` : `Bank — ${bankName}`}</strong><br /><br />
-            Processing Time: <strong>24–48 hours</strong>
+            Processing Time: <strong>0–5 hours</strong>
           </div>
           <button style={S.btnPrimary} onClick={() => { onSuccess(Number(amt)); onClose(); }}>DONE</button>
         </>}
