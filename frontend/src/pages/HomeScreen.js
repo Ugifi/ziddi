@@ -139,31 +139,30 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     return `${open}-${jodi}-${close}`;
   };
 
-   // ✅ STATUS LOGIC: 2 AM Reset Logic Added
+   // ✅ STATUS LOGIC: Backend cron se reset hoga (2 AM IST)
   const getGameStatus = (g) => {
     const now = new Date();
-    const currentHour = now.getHours();
     const currentTime = now.toTimeString().split(' ')[0]; // "HH:MM:SS"
-    
-    // 2 AM Rule: Agar raat 12 baje se 2 baje ke bechein hai, toh game closed rahega
-    if (currentHour < 2) {
-      return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
-    }
-    
-    // Agar close time guzar gaya ya dono result aa gaye
+
     const hasOpen = g.open_result && String(g.open_result).trim() !== '';
     const hasClose = g.close_result && String(g.close_result).trim() !== '';
-    
-    if (currentTime >= g.close_time || (hasOpen && hasClose)) {
+
+    // Dono results aa gaye = band
+    if (hasOpen && hasClose) {
       return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
     }
-    
-    // Agar open result aa gaya hai (close time nahi hua)
+
+    // Close time guzar gaya = band
+    if (currentTime >= g.close_time) {
+      return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
+    }
+
+    // Open result aa gaya, close abhi baaki
     if (hasOpen) {
       return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
     }
-    
-    // Agar open result nahi aaya hai
+
+    // Normal open
     return { text: 'Market is open', canPlay: true, className: 'hs-status-running' };
   };
 
