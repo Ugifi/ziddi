@@ -83,7 +83,7 @@ function SuccessPopup({ onClose }) {
         </div>
         <div style={{ fontSize: 14, color: '#8a9bb5', fontWeight: 600, lineHeight: 1.7, marginBottom: 24 }}>
           Aapki deposit request successfully<br />submit ho gayi hai.<br />
-          <span style={{ color: '#1e8a3c', fontWeight: 800 }}>0–5 ghante</span> mein wallet mein<br />add ho jaayega. ✨
+          <span style={{ color: '#1e8a3c', fontWeight: 800 }}>10-30 Minutes</span> mein wallet mein<br />add ho jaayega. ✨
         </div>
 
         {/* Progress bar */}
@@ -522,7 +522,7 @@ export function BidsPage({ apiCall }) {
                 <div style={{ width: 40, height: 40, background: '#eef2f7', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🎯</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: 14, color: '#0d1f40', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.game_name} — {b.game_type}</div>
-                  <div style={{ fontSize: 11, color: '#8a9bb5', marginTop: 3 }}>#{b.number} · {new Date(b.created_at).toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: 11, color: '#8a9bb5', marginTop: 3 }}>#{b.number} · <span style={{ background: b.session === 'open' ? '#E3F2FD' : '#EDE7F6', color: b.session === 'open' ? '#1565C0' : '#6A1B9A', fontWeight: 800, padding: '2px 7px', borderRadius: 6, fontSize: 10, textTransform: 'uppercase' }}>{b.session || 'N/A'}</span> · {new Date(b.created_at).toLocaleString('en-IN')}</div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div style={{ fontWeight: 900, fontSize: 15, color: clr, marginBottom: 4 }}>
