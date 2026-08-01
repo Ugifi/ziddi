@@ -7,8 +7,9 @@ export default function Drawer({ user, onClose, onNav, onLogout }) {
 
   const defaultAvatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucky&backgroundColor=ffcc00";
 
-  // ✅ APK available check
+  // ✅ APK availability check
   const [apkAvailable, setApkAvailable] = useState(false);
+  const [apkChecking, setApkChecking] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('mk_token');
@@ -16,8 +17,19 @@ export default function Drawer({ user, onClose, onNav, onLogout }) {
       headers: token ? { 'Authorization': `Bearer ${token}` } : {}
     })
       .then(r => r.json())
-      .then(d => { if (d.success && d.exists) setApkAvailable(true); })
-      .catch(() => {});
+      .then(d => {
+        if (d.success && d.exists) {
+          setApkAvailable(true);
+        } else {
+          setApkAvailable(false);
+        }
+      })
+      .catch(() => {
+        setApkAvailable(false);
+      })
+      .finally(() => {
+        setApkChecking(false);
+      });
   }, []);
 
   const getAvatarUrl = () => {
@@ -157,52 +169,56 @@ export default function Drawer({ user, onClose, onNav, onLogout }) {
         <DrawerItem icon="🏆" label="Win History" onClick={() => { onNav('bids'); onClose(); }} />
 
         {/* ═══════════════════════════════════════════════════════════ */}
-        {/* ✅ DOWNLOAD APP — BRIGHT GOLD, IMPOSSIBLE TO MISS ✅ */}
+        {/* ✅ DOWNLOAD APP — SIRF TAB DIKHEGA JAB APK UPLOADED HO ✅ */}
         {/* ═══════════════════════════════════════════════════════════ */}
-        <SectionLabel text="📱 App" />
+        {apkAvailable && (
+          <>
+            <SectionLabel text="📱 App" />
 
-        <div
-          onClick={() => {
-            window.open(`${API_URL}/download/app`, '_blank');
-            onClose();
-          }}
-          style={{
-            margin: '0 12px 8px 12px',
-            padding: '14px 16px',
-            background: 'linear-gradient(135deg, #1a1a00, #2d2000, #3d2d00)',
-            border: '2px solid #f0a500',
-            borderRadius: 14,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            animation: 'glowPulse 2s infinite ease-in-out',
-          }}
-        >
-          <div style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: 'linear-gradient(135deg, #f0a500, #ff6600)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22, flexShrink: 0,
-          }}>
-            📱
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: 15, fontWeight: 900, color: '#FFD700',
-              letterSpacing: 0.5, lineHeight: 1.2
-            }}>
-              Download App
+            <div
+              onClick={() => {
+                window.open(`${API_URL}/download/app`, '_blank');
+                onClose();
+              }}
+              style={{
+                margin: '0 12px 8px 12px',
+                padding: '14px 16px',
+                background: 'linear-gradient(135deg, #1a1a00, #2d2000, #3d2d00)',
+                border: '2px solid #f0a500',
+                borderRadius: 14,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                animation: 'glowPulse 2s infinite ease-in-out',
+              }}
+            >
+              <div style={{
+                width: 40, height: 40, borderRadius: 12,
+                background: 'linear-gradient(135deg, #f0a500, #ff6600)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 22, flexShrink: 0,
+              }}>
+                📱
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: 15, fontWeight: 900, color: '#FFD700',
+                  letterSpacing: 0.5, lineHeight: 1.2
+                }}>
+                  Download App
+                </div>
+                <div style={{
+                  fontSize: 10, color: '#22c55e',
+                  fontWeight: 700, marginTop: 3
+                }}>
+                  ✅ APK Available — Tap to Download
+                </div>
+              </div>
+              <div style={{ color: '#f0a500', fontSize: 16, fontWeight: 900 }}>⬇</div>
             </div>
-            <div style={{
-              fontSize: 10, color: apkAvailable ? '#22c55e' : '#888',
-              fontWeight: 700, marginTop: 3
-            }}>
-              {apkAvailable ? '✅ APK Available — Tap to Download' : '⏳ APK coming soon...'}
-            </div>
-          </div>
-          <div style={{ color: '#f0a500', fontSize: 16, fontWeight: 900 }}>⬇</div>
-        </div>
+          </>
+        )}
 
         {/* ─── HELP & SUPPORT ─── */}
         <SectionLabel text="Help & Support" />
