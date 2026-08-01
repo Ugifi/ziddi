@@ -48,6 +48,15 @@ app.use('/api/wallet',  walletRoutes);
 app.use('/api/admin',   adminRoutes);
 app.use('/api/scraper', scraperRoutes);
 
+// APK Public Download (No Auth)
+app.get('/download/app', (req, res) => {
+  const apkPath = path.join(__dirname, 'uploads/apk/matka-app.apk');
+  if (!require('fs').existsSync(apkPath)) {
+    return res.status(404).json({ success: false, message: 'APK abhi available nahi hai' });
+  }
+  res.download(apkPath, 'MatkaKing.apk');
+});
+
 app.get('/', (req, res) => {
   res.json({
     success: true,
