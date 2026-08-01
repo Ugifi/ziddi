@@ -102,17 +102,17 @@ router.put('/users/:id/coins', [
     const [user] = await conn.query(`SELECT ${walletCol} FROM users WHERE id = ? FOR UPDATE`, [req.params.id]);
     if (!user.length) { await conn.rollback(); return res.status(404).json({ success: false, message: 'User not found' }); }
     if (action === 'deduct' && parseFloat(user[0][walletCol]) < amountF) { await conn.rollback(); return res.status(400).json({ success: false, message: 'Insufficient balance' }); }
-    
+
     const op = action === 'add' ? '+' : '-';
     await conn.query(`UPDATE users SET ${walletCol} = ${walletCol} ${op} ? WHERE id = ?`, [amountF, req.params.id]);
     await conn.query(`INSERT INTO transactions (user_id, type, wallet_type, amount, description, status) VALUES (?, ?, ?, ?, ?, 'completed')`, [req.params.id, action === 'add' ? 'credit' : 'debit', walletType, amountF, note || `Admin ${action === 'add' ? 'credited' : 'deducted'} ₹${amountF}`]);
-    
+
     await conn.commit();
     res.json({ success: true, message: `₹${amountF} ${action === 'add' ? 'added to' : 'deducted from'} user wallet` });
   } catch (err) { await conn.rollback(); res.status(500).json({ success: false, message: 'Server error' }); } finally { conn.release(); }
 });
 
-// ── MOBILE NUMBER CHANGE ──────────────────────────────────────
+// ── MOBILE NUMBER CHANGE ──
 router.put('/users/:id/change-mobile', [body('mobile').isMobilePhone().withMessage('Valid mobile number required')], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
@@ -128,8 +128,6 @@ router.put('/users/:id/change-mobile', [body('mobile').isMobilePhone().withMessa
 // ══════════════════════════════════════════════════════════════
 //  GAME MANAGEMENT
 // ══════════════════════════════════════════════════════════════
-
-// ✅ FIX: GET ALL GAMES (Yeh missing tha, isliye admin panel mein games nahi aa rahe the)
 router.get('/games', async (req, res) => {
   try {
     const [games] = await db.query('SELECT * FROM games WHERE status != "deleted" ORDER BY open_time ASC');
@@ -287,7 +285,7 @@ router.put('/games/:id/result', [body('open_result').notEmpty().withMessage('Ope
 });
 
 // ══════════════════════════════════════════════════════════════
-//  DEPOSIT MANAGEMENT (REFERRAL BONUS TRIGGER YAHAN HAI)
+//  DEPOSIT MANAGEMENT
 // ══════════════════════════════════════════════════════════════
 router.get('/deposits', async (req, res) => {
   try {
@@ -320,7 +318,7 @@ router.put('/deposits/:id', [
   body('action').isIn(['approve', 'reject'])
 ], async (req, res) => {
   const { action, note } = req.body;
-  const REFERRAL_BONUS = 50; // ₹50 dono ko
+  const REFERRAL_BONUS = 50;
 
   const conn = await db.getConnection();
   try {
@@ -594,45 +592,6 @@ router.get('/referrals', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
-// APK Upload Storage
-const apkStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '../uploads/apk');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, 'matka-app.apk');
-  }
-});
-const apkUpload = multer({ 
-  storage: apkStorage,
-  fileFilter: (req, file, cb) => {
-    if (file.originalname.endsWith('.apk')) cb(null, true);
-    else cb(new Error('Sirf APK file allowed hai'));
-  },
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB max
-});
-
-// APK Upload
-router.post('/upload-apk', apkUpload.single('apk'), (req, res) => {
-  if (!req.file) return res.status(400).json({ success: false, message: 'APK file nahi mili' });
-  res.json({ success: true, message: 'APK upload ho gaya ✅', filename: req.file.filename });
-});
-
-// APK Info
-router.get('/apk-info', (req, res) => {
-  const apkPath = path.join(__dirname, '../uploads/apk/matka-app.apk');
-  if (fs.existsSync(apkPath)) {
-    const stat = fs.statSync(apkPath);
-    res.json({ success: true, exists: true, size: (stat.size / (1024*1024)).toFixed(2) + ' MB', updated: stat.mtime });
-  } else {
-    res.json({ success: true, exists: false });
-  }
-});
-
-module.exports = router;
+// ══════════════════════════════════════════════════════════════
+//  APK UPLOAD — FIXED
