@@ -105,12 +105,18 @@ export default function Drawer({ user, onClose, onNav, onLogout }) {
           onClick={() => { window.open(`https://t.me/${telegramId}`, '_blank'); onClose(); }} 
         />
 
-        {/* ─── MORE SECTION ─── */}
-        <SectionLabel text="More" />
-        <DrawerItem icon="📖" label="How to Play" onClick={() => { onNav('htp'); onClose(); }} />
-        <DrawerItem icon="❓" label="FAQ" onClick={() => { onNav('faq'); onClose(); }} />
-        <DrawerItem icon="📜" label="Terms & Conditions" onClick={() => { onNav('terms'); onClose(); }} />
-        <DrawerItem icon="🔒" label="Privacy Policy" onClick={() => { onNav('privacy'); onClose(); }} />
+       {/* ─── MORE SECTION ─── */}
+<SectionLabel text="More" />
+<DrawerItem icon="📖" label="How to Play" onClick={() => { onNav('htp'); onClose(); }} />
+<DrawerItem icon="❓" label="FAQ" onClick={() => { onNav('faq'); onClose(); }} />
+<DrawerItem icon="📜" label="Terms & Conditions" onClick={() => { onNav('terms'); onClose(); }} />
+<DrawerItem icon="🔒" label="Privacy Policy" onClick={() => { onNav('privacy'); onClose(); }} />
+<DrawerItem 
+  icon="📱" label="Download App" 
+  iconBg="rgba(21, 101, 192, 0.15)" iconBorder="#1565C0"
+  txtColor="#FFD700"
+  onClick={() => { window.open(`${API_URL}/download/app`, '_blank'); onClose(); }} 
+/>
 
         {/* ─── LOGOUT (PURE SVG ANIMATED) ─── */}
         <div style={{ padding: '20px 15px', paddingBottom: '40px' }}>
