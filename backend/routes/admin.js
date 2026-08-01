@@ -5,6 +5,9 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const db = require('../config/db');
 const { adminMiddleware } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 router.use(adminMiddleware);
 
@@ -589,6 +592,46 @@ router.get('/referrals', async (req, res) => {
     res.json({ success: true, referrals: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// APK Upload Storage
+const apkStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, '../uploads/apk');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, 'matka-app.apk');
+  }
+});
+const apkUpload = multer({ 
+  storage: apkStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.originalname.endsWith('.apk')) cb(null, true);
+    else cb(new Error('Sirf APK file allowed hai'));
+  },
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB max
+});
+
+// APK Upload
+router.post('/upload-apk', apkUpload.single('apk'), (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: 'APK file nahi mili' });
+  res.json({ success: true, message: 'APK upload ho gaya ✅', filename: req.file.filename });
+});
+
+// APK Info
+router.get('/apk-info', (req, res) => {
+  const apkPath = path.join(__dirname, '../uploads/apk/matka-app.apk');
+  if (fs.existsSync(apkPath)) {
+    const stat = fs.statSync(apkPath);
+    res.json({ success: true, exists: true, size: (stat.size / (1024*1024)).toFixed(2) + ' MB', updated: stat.mtime });
+  } else {
+    res.json({ success: true, exists: false });
   }
 });
 
