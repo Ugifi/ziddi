@@ -1,11 +1,11 @@
 import React from 'react';
 
 export default function Drawer({ user, onClose, onNav, onLogout }) {
-  const whatsappNumber = "919999999999"; // Apna WhatsApp no. daalein
-  const telegramId = "matkaking_support"; // Apna Telegram username daalein
+  const whatsappNumber = "918767108332"; // Apna WhatsApp no. daalein
+  const telegramId = "Matkaboss21"; // Apna Telegram username daalein
 
   // 🔥 Smart Image Checker Logic 🔥
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const API_URL = 'https://ziddi-1-we11.onrender.com';
   const defaultAvatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucky&backgroundColor=ffcc00";
   
   const getAvatarUrl = () => {
