@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Browser } from '@capacitor/browser';
 
 // ── BLUE THEME SHARED STYLES ──
 const B = {
@@ -658,8 +659,14 @@ export function TxnsPage({ apiCall, navigate }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 800, color: '#0d1f40', fontSize: 14, marginBottom: 3 }}>{typeLabel(tx.type)}</div>
                 <div style={{ fontSize: 11, color: '#8a9bb5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.description || tx.note || '—'}</div>
-                <div style={{ fontSize: 10, color: '#8a9bb5', marginTop: 3 }}>{tx.created_at ? new Date(tx.created_at).toLocaleString('en-IN') : '—'}</div>
-              </div>
+<div style={{ fontSize: 10, color: '#8a9bb5', marginTop: 3 }}>{tx.created_at ? (() => {
+  try {
+    let str = String(tx.created_at);
+    if (!str.includes('T') && str.includes(' ')) str = str.replace(' ', 'T') + 'Z';
+    else if (str.includes('T') && !str.includes('+') && !str.endsWith('Z')) str = str + 'Z';
+    return new Date(str).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch(e) { return tx.created_at; }
+})() : '—'}</div>              </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ fontWeight: 900, fontSize: 15, color: credit ? '#1e8a3c' : '#c0392b' }}>{credit ? '+' : '-'}₹{amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
                 {balAfter !== null && <div style={{ fontSize: 10, color: '#8a9bb5', marginTop: 3 }}>Bal: ₹{Number(balAfter).toLocaleString('en-IN')}</div>}
