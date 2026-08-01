@@ -1,6 +1,5 @@
 // ══════════════════════════════════════════════════════════════
 //  ADMIN PANEL — Blue Theme (Badshah Khaiwal Style)
-//  ✅ APK Upload Fixed — XMLHttpRequest + Progress + Timeout + Cancel
 // ══════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -11,6 +10,7 @@ function toIST(dateStr) {
   if (!dateStr) return '';
   try {
     let str = String(dateStr);
+    // Sab UTC mein stored hai — 'Z' lagao
     if (!str.includes('T') && str.includes(' ')) {
       str = str.replace(' ', 'T') + 'Z';
     } else if (str.includes('T') && !str.includes('+') && !str.endsWith('Z')) {
@@ -25,7 +25,6 @@ function toIST(dateStr) {
     });
   } catch (e) { return ''; }
 }
-
 function toISTlocal(dateStr) {
   if (!dateStr) return '';
   try {
@@ -44,8 +43,9 @@ function toISTlocal(dateStr) {
     });
   } catch (e) { return ''; }
 }
+// NAYA — timeout + retry wala
 
-// ── API Call with timeout + retry ──
+// NAYA — timeout + retry wala
 async function apiCall(path, method = 'GET', body = null, retries = 2) {
   const token = localStorage.getItem('mk_token');
   const url = method === 'GET'
@@ -55,7 +55,7 @@ async function apiCall(path, method = 'GET', body = null, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15 sec timeout
 
       const res = await fetch(url, {
         method,
@@ -73,12 +73,12 @@ async function apiCall(path, method = 'GET', body = null, retries = 2) {
     } catch (err) {
       console.warn(`API attempt ${attempt + 1} failed:`, err.message);
       if (attempt === retries) return { success: false, message: 'Server se connect nahi ho pa raha. Thodi der mein retry karo.' };
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 2000)); // 2 sec wait between retries
     }
   }
 }
 
-// ── BLUE THEME TOKENS ──
+// ── BLUE THEME TOKENS ──────────────────────────────────────────
 const C = {
   navBg: 'linear-gradient(135deg, #0d1b5e 0%, #1a2f8f 60%, #1565C0 100%)',
   drawerBg: '#0a1550',
@@ -166,7 +166,7 @@ const B = {
   },
 };
 
-// ── TIME PICKER WITH AM/PM ──
+// ── TIME PICKER WITH AM/PM ─────────────────────────────────────
 function TimePicker({ value, onChange, placeholder }) {
   const parseTime = (val) => {
     if (!val) return { hh: '', mm: '', ampm: 'AM' };
@@ -231,7 +231,7 @@ function displayTime(val) {
   return `${hh}:${m || '00'} ${ampm}`;
 }
 
-// ── STATUS BADGE ──
+// ── STATUS BADGE ───────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
     approved: { bg: C.successBg, color: C.success, label: 'Approved' },
@@ -258,7 +258,7 @@ function ActionBtn({ onClick, color, bg, children }) {
   );
 }
 
-// ── EDIT GAME MODAL ──
+// ── EDIT GAME MODAL ────────────────────────────────────────────
 function EditGameModal({ game, onClose, onSave }) {
   const [form, setForm] = useState({
     name: game.name || '',
@@ -297,7 +297,7 @@ function EditGameModal({ game, onClose, onSave }) {
   );
 }
 
-// ── CHANGE MOBILE MODAL ──
+// ── CHANGE MOBILE MODAL ────────────────────────────────────────
 function ChangeMobileModal({ user, onClose, onSave }) {
   const [mobile, setMobile] = useState('');
   const [saving, setSaving] = useState(false);
@@ -318,11 +318,14 @@ function ChangeMobileModal({ user, onClose, onSave }) {
           <div style={{ fontSize: 17, fontWeight: 900, color: C.textMain }}>📱 Change Mobile</div>
           <button onClick={onClose} style={{ background: C.dangerBg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.danger, fontSize: 16, fontWeight: 900 }}>✕</button>
         </div>
+
+        {/* Current number display */}
         <div style={{ background: C.inputBg, border: `1.5px solid ${C.inputBdr}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: C.textSub, fontWeight: 700, lineHeight: 1.8 }}>
           👤 <strong style={{ color: C.textMain }}>{user.name}</strong><br />
           <span style={{ color: C.textMuted, fontSize: 12 }}>Current Number: </span>
           <strong style={{ color: C.primary }}>{user.mobile}</strong>
         </div>
+
         <label style={B.label}>New Mobile Number</label>
         <input
           style={B.input}
@@ -333,16 +336,19 @@ function ChangeMobileModal({ user, onClose, onSave }) {
           onChange={e => setMobile(e.target.value.replace(/\D/g, ''))}
           onKeyDown={e => e.key === 'Enter' && save()}
         />
+
         {mobile.length > 0 && mobile.length < 10 && (
           <div style={{ color: C.warn, fontSize: 12, fontWeight: 700, marginTop: -8, marginBottom: 10 }}>
             ⚠️ {10 - mobile.length} digit aur chahiye
           </div>
         )}
+
         {mobile.length === 10 && (
           <div style={{ color: C.success, fontSize: 12, fontWeight: 700, marginTop: -8, marginBottom: 10 }}>
             ✅ Number valid hai
           </div>
         )}
+
         <button
           onClick={save}
           disabled={saving || mobile.length !== 10}
@@ -355,7 +361,7 @@ function ChangeMobileModal({ user, onClose, onSave }) {
   );
 }
 
-// ── USER CARD ──
+// ─── USER CARD ────────────────────────────────────────────────
 function UserCard({ u, onBlock, onAddCoins, onDeductCoins, onChangeMobile, onLoginAs }) {
   return (
     <div style={B.card}>
@@ -377,6 +383,7 @@ function UserCard({ u, onBlock, onAddCoins, onDeductCoins, onChangeMobile, onLog
           </div>
         ))}
       </div>
+      {/* Row 1: Block / Add / Deduct */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <ActionBtn onClick={() => onBlock(u.id, u.is_blocked)} color={u.is_blocked ? C.success : C.warn} bg={u.is_blocked ? C.successBg : C.warnBg}>
           {u.is_blocked ? '✅ Unblock' : '🚫 Block'}
@@ -384,10 +391,12 @@ function UserCard({ u, onBlock, onAddCoins, onDeductCoins, onChangeMobile, onLog
         <ActionBtn onClick={() => onAddCoins(u.id)} color={C.success} bg={C.successBg}>+ Coins</ActionBtn>
         <ActionBtn onClick={() => onDeductCoins(u.id)} color={C.danger} bg={C.dangerBg}>- Coins</ActionBtn>
       </div>
+      {/* Row 2: Change Mobile / Login As User */}
       <div style={{ display: 'flex', gap: 8 }}>
         <ActionBtn onClick={() => onChangeMobile(u)} color={C.primary} bg={C.badgePend}>
           📱 Change Mobile
         </ActionBtn>
+        {/* ✅ LOGIN AS USER BUTTON */}
         <ActionBtn onClick={() => onLoginAs(u.id)} color={C.textMain} bg={C.accentSoft}>
           🧑‍💻 Login
         </ActionBtn>
@@ -396,7 +405,7 @@ function UserCard({ u, onBlock, onAddCoins, onDeductCoins, onChangeMobile, onLog
   );
 }
 
-// ── DEPOSIT CARD ──
+// ─── DEPOSIT CARD ─────────────────────────────────────────────
 function DepositCard({ d, onApprove, onReject }) {
   const [utrCopied, setUtrCopied] = React.useState(false);
   const utrValue = d.utr_number || d.utr || d.transaction_id || '';
@@ -418,6 +427,7 @@ function DepositCard({ d, onApprove, onReject }) {
         </div>
         <div style={{ fontWeight: 900, fontSize: 20, color: C.success }}>₹{Number(d.amount).toLocaleString()}</div>
       </div>
+
       {utrValue && (
         <div style={{ background: C.inputBg, border: `1.5px solid ${C.inputBdr}`, borderRadius: 10, padding: '10px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <div>
@@ -429,10 +439,12 @@ function DepositCard({ d, onApprove, onReject }) {
           </button>
         </div>
       )}
+
       {d.upi_id && (
         <div style={{ fontSize: 13, color: C.textSub, marginBottom: 8, fontWeight: 600 }}>UPI Ref: {d.upi_id}</div>
       )}
       <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, fontWeight: 600 }}>📅 {toIST(d.created_at)}</div>
+
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <StatusBadge status={d.status} />
         {d.status === 'pending' && <>
@@ -444,7 +456,7 @@ function DepositCard({ d, onApprove, onReject }) {
   );
 }
 
-// ── WITHDRAWAL CARD ──
+// ─── WITHDRAWAL CARD ──────────────────────────────────────────
 function WithdrawCard({ w, onApprove, onReject }) {
   const isBank = w.method === 'bank' || w.account_number;
   return (
@@ -487,16 +499,10 @@ function WithdrawCard({ w, onApprove, onReject }) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════
-// ✅ APK UPLOAD SECTION — FIXED (XMLHttpRequest + Progress + Cancel)
-// ══════════════════════════════════════════════════════════════
 function ApkUploadSection({ showToast }) {
   const [apkInfo, setApkInfo] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadSize, setUploadSize] = useState('');
   const fileRef = useRef(null);
-  const xhrRef = useRef(null);
 
   useEffect(() => {
     apiCall('/api/admin/apk-info').then(d => {
@@ -507,99 +513,28 @@ function ApkUploadSection({ showToast }) {
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    if (!file.name.toLowerCase().endsWith('.apk')) {
-      showToast('❌ Sirf .apk file upload karo!');
-      if (fileRef.current) fileRef.current.value = '';
-      return;
-    }
-
-    const maxSize = 50 * 1024 * 1024;
-    if (file.size > maxSize) {
-      showToast(`❌ File size ${(file.size / (1024 * 1024)).toFixed(1)}MB hai. 50MB se chhoti APK use karo!`);
-      if (fileRef.current) fileRef.current.value = '';
-      return;
-    }
-
-    setUploadSize(`${(file.size / (1024 * 1024)).toFixed(1)} MB`);
+    if (!file.name.endsWith('.apk')) { showToast('❌ Sirf .apk file upload karo!'); return; }
+    
     setUploading(true);
-    setUploadProgress(0);
-
     const formData = new FormData();
     formData.append('apk', file);
-
-    // ✅ XMLHttpRequest — progress + timeout + cancel
-    const xhr = new XMLHttpRequest();
-    xhrRef.current = xhr;
-
-    xhr.upload.onprogress = (evt) => {
-      if (evt.lengthComputable) {
-        const pct = Math.round((evt.loaded / evt.total) * 100);
-        setUploadProgress(pct);
+    
+    try {
+      const token = localStorage.getItem('mk_token');
+      const res = await fetch(`${API}/api/admin/upload-apk`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('✅ APK upload ho gaya!');
+        apiCall('/api/admin/apk-info').then(d => { if (d.success) setApkInfo(d); });
+      } else {
+        showToast('❌ Error: ' + data.message);
       }
-    };
-
-    xhr.onload = () => {
-      setUploading(false);
-      setUploadProgress(0);
-      setUploadSize('');
-      if (fileRef.current) fileRef.current.value = '';
-
-      try {
-        const data = JSON.parse(xhr.responseText);
-        if (xhr.status >= 200 && xhr.status < 300 && data.success) {
-          showToast('✅ APK upload ho gaya!');
-          apiCall('/api/admin/apk-info').then(d => {
-            if (d.success) setApkInfo(d);
-          });
-        } else {
-          showToast('❌ ' + (data.message || `Server error (${xhr.status})`));
-        }
-      } catch {
-        if (xhr.status === 502 || xhr.status === 504) {
-          showToast('❌ Server timeout! Render.com free tier mein 30 sec limit hai. Chhoti APK try karo ya paid plan use karo.');
-        } else {
-          showToast(`❌ Server error (HTTP ${xhr.status}). Chhoti file try karo.`);
-        }
-      }
-    };
-
-    xhr.onerror = () => {
-      setUploading(false);
-      setUploadProgress(0);
-      setUploadSize('');
-      if (fileRef.current) fileRef.current.value = '';
-      showToast('❌ Network error! Internet connection check karo.');
-    };
-
-    xhr.ontimeout = () => {
-      setUploading(false);
-      setUploadProgress(0);
-      setUploadSize('');
-      if (fileRef.current) fileRef.current.value = '';
-      showToast('⏱️ Upload timeout! Render.com free tier = 30 sec hard limit. Chhoti APK try karo ya upgrade karo.');
-    };
-
-    xhr.onabort = () => {
-      setUploading(false);
-      setUploadProgress(0);
-      setUploadSize('');
-      if (fileRef.current) fileRef.current.value = '';
-      showToast('🚫 Upload cancelled.');
-    };
-
-    const token = localStorage.getItem('mk_token');
-    xhr.open('POST', `${API}/api/admin/upload-apk`);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    // ⚠️ DO NOT set Content-Type — browser auto sets multipart/form-data with boundary
-    xhr.timeout = 120000; // 2 minute client-side timeout
-    xhr.send(formData);
-  };
-
-  const cancelUpload = () => {
-    if (xhrRef.current && uploading) {
-      xhrRef.current.abort();
-    }
+    } catch { showToast('❌ Upload failed!'); }
+    setUploading(false);
   };
 
   const downloadLink = `${API}/download/app`;
@@ -610,9 +545,7 @@ function ApkUploadSection({ showToast }) {
         <div style={{ background: C.successBg, border: `1.5px solid #A5D6A7`, borderRadius: 12, padding: 14, marginBottom: 14 }}>
           <div style={{ fontWeight: 800, color: C.success, fontSize: 14, marginBottom: 4 }}>✅ APK Available</div>
           <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600 }}>Size: {apkInfo.size}</div>
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-            Updated: {new Date(apkInfo.updated).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
-          </div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Updated: {new Date(apkInfo.updated).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
           <a href={downloadLink} target="_blank" rel="noopener noreferrer"
             style={{ display: 'inline-block', marginTop: 10, padding: '8px 20px', borderRadius: 10, background: C.primary, color: '#fff', fontWeight: 800, fontSize: 12, textDecoration: 'none' }}>
             ⬇️ Download Test karo
@@ -624,82 +557,23 @@ function ApkUploadSection({ showToast }) {
         </div>
       )}
 
-      {/* ── UPLOAD PROGRESS BAR ── */}
-      {uploading && (
-        <div style={{ marginBottom: 14, background: C.inputBg, border: `1.5px solid ${C.inputBdr}`, borderRadius: 12, padding: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: 12, color: C.textSub, fontWeight: 700 }}>
-              📤 Uploading {uploadSize}...
-            </span>
-            <span style={{ fontSize: 14, color: C.primary, fontWeight: 900 }}>
-              {uploadProgress}%
-            </span>
-          </div>
-          <div style={{ width: '100%', height: 10, background: '#E0E0E0', borderRadius: 5, overflow: 'hidden' }}>
-            <div style={{
-              width: `${uploadProgress}%`,
-              height: '100%',
-              background: `linear-gradient(90deg, ${C.primary}, #42A5F5)`,
-              borderRadius: 5,
-              transition: 'width 0.3s ease',
-            }} />
-          </div>
-          {uploadProgress < 100 && (
-            <div style={{ fontSize: 10, color: C.warn, fontWeight: 700, marginTop: 8 }}>
-              ⚠️ Render.com free tier mein 30 sec ka limit hai. Agar stuck ho toh chhoti APK try karo.
-            </div>
-          )}
-          <button onClick={cancelUpload} style={{
-            marginTop: 10, width: '100%', padding: '10px', borderRadius: 10,
-            background: C.dangerBg, border: `1.5px solid ${C.danger}`,
-            color: C.danger, fontWeight: 800, fontSize: 12, cursor: 'pointer'
-          }}>
-            🚫 CANCEL UPLOAD
-          </button>
-        </div>
-      )}
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".apk"
-        style={{ display: 'none' }}
-        onChange={handleUpload}
-      />
-
-      <button
-        onClick={() => fileRef.current?.click()}
-        disabled={uploading}
-        style={{
-          ...B.btn,
-          background: uploading ? '#90CAF9' : 'linear-gradient(135deg, #1565C0, #1976D2)',
-          opacity: uploading ? 0.6 : 1,
-          cursor: uploading ? 'not-allowed' : 'pointer',
-        }}
-      >
-        {uploading ? `⏳ UPLOADING ${uploadProgress}%...` : '📤 UPLOAD NEW APK'}
+      <input ref={fileRef} type="file" accept=".apk" style={{ display: 'none' }} onChange={handleUpload} />
+      <button onClick={() => fileRef.current?.click()} disabled={uploading}
+        style={{ ...B.btn, background: uploading ? '#90CAF9' : 'linear-gradient(135deg, #1565C0, #1976D2)', opacity: uploading ? 0.8 : 1 }}>
+        {uploading ? '⏳ UPLOADING...' : '📤 UPLOAD NEW APK'}
       </button>
-
-      <div style={{ marginTop: 10, fontSize: 11, color: C.textMuted, fontWeight: 600, lineHeight: 1.6 }}>
-        💡 <strong>Tips:</strong> APK 50MB se chhoti honi chahiye.<br />
-        ⚠️ Render.com free tier = 30 sec request timeout. Badi file ke liye paid plan ya VPS use karo.
-      </div>
 
       {apkInfo?.exists && (
         <div style={{ marginTop: 12, background: C.inputBg, border: `1.5px solid ${C.cardBorder}`, borderRadius: 10, padding: 12 }}>
-          <div style={{ fontSize: 11, color: C.textSub, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase' }}>
-            📋 User Download Link
-          </div>
-          <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, wordBreak: 'break-all' }}>
-            {downloadLink}
-          </div>
+          <div style={{ fontSize: 11, color: C.textSub, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase' }}>📋 User Download Link</div>
+          <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, wordBreak: 'break-all' }}>{downloadLink}</div>
         </div>
       )}
     </div>
   );
 }
 
-// ── ADMIN LOGIN ──
+// ─── ADMIN LOGIN ──────────────────────────────────────────────
 export function AdminLogin({ onLogin }) {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -774,8 +648,11 @@ export default function AdminPanel({ onLogout }) {
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [editingGame, setEditingGame] = useState(null);
+
+  // ── Change Mobile Modal state ──────────────────────────────
   const [changeMobileUser, setChangeMobileUser] = useState(null);
 
+  // ── FIX: Refresh pe logout nahi hoga ──────────────────────────
   const [adminReady, setAdminReady] = useState(false);
   useEffect(() => {
     const token = localStorage.getItem('mk_token');
@@ -804,6 +681,7 @@ export default function AdminPanel({ onLogout }) {
   const [savingSettings, setSavingSettings] = useState(false);
   const qrFileRef = useRef(null);
 
+  // ── CHANGE PASSWORD ────────────────────────────────────────────
   const [pwForm, setPwForm] = useState({ oldPass: '', newPass: '', confirmPass: '' });
   const [pwSaving, setPwSaving] = useState(false);
 
@@ -836,26 +714,33 @@ export default function AdminPanel({ onLogout }) {
     if (isInitial) setLoading(true);
     const done = () => { if (isInitial) setLoading(false); };
 
-    if (currentPage === 'dashboard') {
-      apiCall('/api/admin/stats').then(d => {
-        if (d.success) { setStats({ ...d.stats }); setLastRefresh(new Date()); }
-        done();
-      }).catch(done);
+   if (currentPage === 'dashboard') {
+  apiCall('/api/admin/stats').then(d => { 
+    if (d.success) { 
+      setStats({...d.stats}); 
+      setLastRefresh(new Date()); 
+    } 
+    done(); 
+  }).catch(done);
     } else if (currentPage === 'users') {
       apiCall('/api/admin/users').then(d => { if (d.success) { setUsers(d.users); setLastRefresh(new Date()); } done(); }).catch(done);
-    } else if (currentPage === 'games' || currentPage === 'results') {
-      apiCall('/api/admin/games').then(d => {
-        if (d.success && d.games) {
-          setGames(d.games);
-          setLastRefresh(new Date());
-        } else {
-          showToast('❌ Games load nahi hue: ' + (d.message || 'Server error'));
-        }
-        done();
-      }).catch(err => {
-        showToast('❌ Server se connect nahi ho pa raha!');
-        done();
-      });
+  // NAYA — loading state + error message
+} else if (currentPage === 'games' || currentPage === 'results') {
+  apiCall('/api/admin/games').then(d => {
+    if (d.success && d.games) {
+      setGames(d.games);
+      setLastRefresh(new Date());
+      console.log('✅ Games loaded:', d.games.length);
+    } else {
+      console.error('❌ Games fetch failed:', d.message);
+      showToast('❌ Games load nahi hue: ' + (d.message || 'Server error'));
+    }
+    done();
+  }).catch(err => {
+    console.error('Games fetch error:', err);
+    showToast('❌ Server se connect nahi ho pa raha!');
+    done();
+  });
     } else if (currentPage === 'deposits') {
       apiCall('/api/admin/deposits').then(d => { if (d.success) { setDeposits(d.deposits); setLastRefresh(new Date()); } done(); }).catch(done);
     } else if (currentPage === 'withdrawals') {
@@ -881,8 +766,7 @@ export default function AdminPanel({ onLogout }) {
             support_hours: s.support_hours || prev.support_hours,
             support_email: s.support_email || prev.support_email,
             min_deposit: s.min_deposit || prev.min_deposit,
-            max_deposit: s.max_deposit || prev.max_deposit,
-            min_withdrawal: s.min_withdrawal || prev.min_withdrawal,
+            max_deposit: s.max_deposit || prev.max_deposit,min_withdrawal: s.min_withdrawal || prev.min_withdrawal,
             max_withdrawal: s.max_withdrawal || prev.max_withdrawal,
             maintenance_mode: s.maintenance_mode || '0',
             qr_image: s.qr_image || '',
@@ -922,14 +806,18 @@ export default function AdminPanel({ onLogout }) {
     if (res.success) { showToast('Coins deducted ✅'); fetchPageData('users', false); } else showToast('Error: ' + res.message);
   };
 
-  const handleChangeMobile = (user) => { setChangeMobileUser(user); };
+  // ── CHANGE MOBILE HANDLER ──────────────────────────────────
+  const handleChangeMobile = (user) => {
+    setChangeMobileUser(user);
+  };
 
+  // ── LOGIN AS USER HANDLER ──────────────────────────────────
   const loginAsUser = async (id) => {
     const res = await apiCall(`/api/admin/users/${id}/login-as`, 'POST');
     if (res.success) {
-      localStorage.setItem('mk_admin_token', localStorage.getItem('mk_token'));
-      localStorage.setItem('mk_token', res.token);
-      window.location.href = '/';
+      localStorage.setItem('mk_admin_token', localStorage.getItem('mk_token')); // Backup Admin Token
+      localStorage.setItem('mk_token', res.token); // Set User Token
+      window.location.href = '/'; // Redirect to User App
     } else {
       showToast('❌ Error: ' + (res.message || 'Failed to login as user'));
     }
@@ -946,12 +834,6 @@ export default function AdminPanel({ onLogout }) {
     const newStatus = status === 'open' ? 'closed' : 'open';
     const res = await apiCall(`/api/admin/games/${id}/status`, 'PUT', { status: newStatus });
     if (res.success) { setGames(gs => gs.map(g => g.id === id ? { ...g, status: newStatus } : g)); showToast(`Game ${newStatus} ✅`); }
-  };
-  const deleteGame = async (id) => {
-    if (!window.confirm('Yeh game delete karna hai? Yeh undo nahi hoga!')) return;
-    const res = await apiCall(`/api/admin/games/${id}`, 'DELETE');
-    if (res.success) { setGames(gs => gs.filter(g => g.id !== id)); showToast('Game deleted ✅'); }
-    else showToast('Error: ' + (res.message || 'Delete failed'));
   };
   const declareResult = async (gameId) => {
     const val = resultForm[gameId]; if (!val) return;
@@ -1032,19 +914,6 @@ export default function AdminPanel({ onLogout }) {
     );
   }
 
-  // ── BID FILTERING ──
-  const filteredBids = bids.filter(b => {
-    if (bidFilterDate) {
-      const bidDate = new Date(b.created_at);
-      const filterDateObj = new Date(bidFilterDate);
-      if (bidDate.toDateString() !== filterDateObj.toDateString()) return false;
-    }
-    if (bidFilterStatus && bidFilterStatus !== 'all') {
-      if (b.status !== bidFilterStatus) return false;
-    }
-    return true;
-  });
-
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: C.pageBg, fontFamily: '"Segoe UI", sans-serif' }}>
 
@@ -1107,8 +976,7 @@ export default function AdminPanel({ onLogout }) {
       {/* SIDE DRAWER */}
       <div style={{ position: 'fixed', top: 0, left: 0, height: '100%', width: 272, background: C.drawerBg, zIndex: 400, overflowY: 'auto', paddingBottom: 40, transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)', boxShadow: drawerOpen ? '5px 0 40px rgba(0,0,0,0.4)' : 'none' }}>
         <div style={{ background: C.navBg, padding: '24px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{settings.site_name || 'SAKTA MATKA'}</div>
+          <div><div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: 1 }}>{settings.site_name || 'SAKTA MATKA'}</div>
             <div style={{ fontSize: 11, color: C.accent, marginTop: 4, fontWeight: 700, letterSpacing: 1 }}>Admin Control Panel</div>
           </div>
           <button onClick={() => setDrawerOpen(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', color: '#fff', fontSize: 18, fontWeight: 'bold' }}>✕</button>
@@ -1158,420 +1026,431 @@ export default function AdminPanel({ onLogout }) {
           </div>
         )}
 
-        {/* ══════ DASHBOARD ══════ */}
+        {/* ── DASHBOARD ── */}
         {!loading && page === 'dashboard' && stats && (
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 24 }}>
-              {[
-                { val: stats.total_users || 0, label: 'Total Users', color: C.primary, icon: '👥' },
-                { val: stats.active_games || 0, label: 'Active Games', color: '#7B1FA2', icon: '🎮' },
-                { val: stats.today_bids?.count || 0, label: 'Aaj ke Bids', color: C.warn, icon: '🎯' },
-                { val: '₹' + (stats.today_bids?.volume || 0).toLocaleString(), label: 'Bid Volume', color: C.warn, icon: '📈' },
-                { val: stats.pending_deposits?.count || 0, label: 'Pending Deposits', color: C.primary, icon: '💰' },
-                { val: '₹' + (stats.pending_deposits?.volume || 0).toLocaleString(), label: 'Deposit Amount', color: C.primary, icon: '💵' },
-                { val: stats.pending_withdrawals?.count || 0, label: 'Pending Withdraw', color: C.danger, icon: '💸' },
-                { val: '₹' + (stats.pending_withdrawals?.volume || 0).toLocaleString(), label: 'Withdraw Amount', color: C.danger, icon: '🔻' },
-                { val: '₹' + (stats.total_deposited || 0).toLocaleString(), label: 'Total Deposited', color: C.success, icon: '🏦' },
-                { val: '₹' + (stats.total_winnings_paid || 0).toLocaleString(), label: 'Total Winnings', color: C.success, icon: '🏆' },
-                { val: '₹' + (stats.total_wallet_balance || 0).toLocaleString(), label: 'Wallet Balance', color: '#7B1FA2', icon: '💳' },
-                { val: '₹' + (stats.total_winning_balance || 0).toLocaleString(), label: 'Win Balance', color: '#7B1FA2', icon: '🪙' },
-              ].map(({ val, label, color, icon }, i) => (
-                <div key={i} style={{ ...B.card, marginBottom: 0, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                  <div style={{ fontSize: 28, marginBottom: 6 }}>{icon}</div>
-                  <div style={{ fontWeight: 900, fontSize: 20, color, lineHeight: 1 }}>{val}</div>
-                  <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 800, marginTop: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 24 }}>
+            {[
+              { val: stats.total_users || 0, label: 'Total Users', color: C.primary, icon: '👥' },
+              { val: stats.active_games || 0, label: 'Active Games', color: '#7B1FA2', icon: '🎮' },
+              { val: stats.today_bids?.count || 0, label: 'Aaj ke Bids', color: C.warn, icon: '🎯' },
+              { val: '₹' + (stats.today_bids?.volume || 0).toLocaleString(), label: 'Bid Volume', color: C.warn, icon: '📈' },
+              { val: stats.pending_deposits?.count || 0, label: 'Pending Deposits', color: C.danger, icon: '⏳' },
+              { val: '₹' + (stats.pending_deposits?.volume || 0).toLocaleString(), label: 'Pending Dep. Amt', color: C.danger, icon: '💳' },
+              { val: stats.pending_withdrawals?.count || 0, label: 'Pending Withdraw', color: '#D84315', icon: '🔄' },
+              { val: '₹' + (stats.pending_withdrawals?.volume || 0).toLocaleString(), label: 'Pending With. Amt', color: '#D84315', icon: '💵' },
+              { val: '₹' + (stats.total_deposited || 0).toLocaleString(), label: 'Total Deposited', color: '#0277BD', icon: '🏦' },
+              { val: '₹' + (stats.total_winnings_paid || 0).toLocaleString(), label: 'Winnings Paid', color: C.success, icon: '🏆' },
+{ val: '₹' + parseInt(stats.total_wallet_balance || '0'), label: 'Users Wallet Balance', color: '#0277BD', icon: '💳' },
+{ val: '₹' + parseInt(stats.total_winning_balance || '0'), label: 'Users Winning Balance', color: '#2E7D32', icon: '🏅' },
+{ val: '₹' + (parseInt(stats.total_wallet_balance || '0') + parseInt(stats.total_winning_balance || '0')), label: 'Users Total Balance', color: '#6A1B9A', icon: '📊' },].map((s, i) => (
+              <div key={i} style={{ background: C.card, borderRadius: 16, padding: 16, boxShadow: C.cardShadow, border: `1.5px solid ${C.cardBorder}`, borderLeft: `5px solid ${s.color}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 46, height: 46, borderRadius: 12, background: s.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{s.icon}</div>
+                <div>
+                  <div style={{ fontSize: 19, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.val}</div>
+                  <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 4, fontWeight: 800 }}>{s.label}</div>
                 </div>
-              ))}
-            </div>
-
-            {/* APK Upload Section on Dashboard */}
-            <div style={{ ...B.card, padding: 20 }}>
-              <div style={B.title}>📱 Android App (APK)</div>
-              <ApkUploadSection showToast={showToast} />
-            </div>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* ══════ USERS ══════ */}
+        {/* ── USERS ── */}
         {!loading && page === 'users' && (
           <div>
-            <div style={{ marginBottom: 12, fontSize: 13, color: C.textMuted, fontWeight: 700 }}>
-              Total Users: {users.length}
-            </div>
-            {users.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 40, color: C.textMuted }}>Koi user nahi mila</div>
-            )}
-            {users.map(u => (
-              <UserCard
-                key={u.id}
-                u={u}
-                onBlock={toggleBlock}
-                onAddCoins={addCoins}
-                onDeductCoins={deductCoins}
-                onChangeMobile={handleChangeMobile}
-                onLoginAs={loginAsUser}
-              />
-            ))}
+            {users.length === 0
+              ? <div style={{ textAlign: 'center', color: C.textMuted, padding: 40, fontWeight: 700 }}>Koi user nahi mila</div>
+              : users.map(u => (
+                <UserCard
+                  key={u.id}
+                  u={u}
+                  onBlock={toggleBlock}
+                  onAddCoins={addCoins}
+                  onDeductCoins={deductCoins}
+                  onChangeMobile={handleChangeMobile}
+                  onLoginAs={loginAsUser}
+                />
+              ))
+            }
           </div>
         )}
 
-        {/* ══════ GAMES ══════ */}
-        {!loading && page === 'games' && (
-          <div>
-            {/* Add New Game */}
-            <div style={{ ...B.card, marginBottom: 20 }}>
-              <div style={B.title}>➕ Add New Game</div>
-              <label style={B.label}>Game Name</label>
-              <input style={B.input} placeholder="e.g. Kalyan" value={newGame.name} onChange={e => setNewGame(n => ({ ...n, name: e.target.value }))} />
-              <label style={B.label}>Open Time</label>
-              <TimePicker value={newGame.open_time} onChange={v => setNewGame(n => ({ ...n, open_time: v }))} />
-              <label style={B.label}>Close Time</label>
-              <TimePicker value={newGame.close_time} onChange={v => setNewGame(n => ({ ...n, close_time: v }))} />
-              <button onClick={addGame} style={B.btn}>➕ ADD GAME</button>
-            </div>
+        {/* ── GAMES ── */}
+        {!loading && page === 'games' && <>
+          <div style={B.card}>
+            <div style={B.title}>➕ Add New Game</div>
+            <label style={B.label}>Game Name</label>
+            <input style={B.input} placeholder="Game Name (e.g. Kalyan)" value={newGame.name} onChange={e => setNewGame({ ...newGame, name: e.target.value })} />
+            <label style={B.label}>Open Time</label>
+            <TimePicker value={newGame.open_time} onChange={v => setNewGame({ ...newGame, open_time: v })} />
+            <label style={B.label}>Close Time</label>
+            <TimePicker value={newGame.close_time} onChange={v => setNewGame({ ...newGame, close_time: v })} />
+            <button style={B.btn} onClick={addGame}>+ ADD GAME</button>
+          </div>
 
-            {/* Game List */}
-            {games.map(g => (
-              <div key={g.id} style={B.card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: C.textMain }}>{g.name}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                      🕐 {displayTime(g.open_time)} — {displayTime(g.close_time)}
+          <div style={B.card}>
+            <div style={B.title}>🎮 All Games</div>
+            {games.length === 0
+              ? <div style={{ color: C.textMuted, textAlign: 'center', padding: 20, fontWeight: 700 }}>No games found.</div>
+              : games.map(g => (
+                <div key={g.id} style={{ background: C.inputBg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1.5px solid ${C.cardBorder}`, opacity: g.is_hidden ? 0.6 : 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 15, color: C.textMain }}>
+                        {g.name} {g.is_hidden && <span style={{ fontSize: 10, color: C.danger, background: C.dangerBg, padding: '2px 6px', borderRadius: 6 }}>HIDDEN</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: C.textSub, marginTop: 4, fontWeight: 600 }}>
+                        🕐 {displayTime(g.open_time)} – {displayTime(g.close_time)}
+                      </div>
+                      <div style={{ fontSize: 12, color: C.textMuted, marginTop: 4, fontWeight: 700 }}>
+                        Result: <strong style={{ color: C.primary, fontSize: 13 }}>{g.open_result || '***'}-{g.jodi_result || '**'}-{g.close_result || '***'}</strong>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <button onClick={() => setEditingGame(g)}
+                          style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.badgePend, color: C.primary, fontSize: 11, fontWeight: 800 }}>
+                          ✏️ Edit
+                        </button>
+                        <button onClick={async () => {
+                          const res = await apiCall(`/api/admin/games/${g.id}/hide`, 'PUT', { hide: !g.is_hidden });
+                          if (res.success) { showToast(g.is_hidden ? 'Game Show ✅' : 'Game Hide 🙈'); setGames(gs => gs.map(item => item.id === g.id ? { ...item, is_hidden: !g.is_hidden } : item)); }
+                        }} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: g.is_hidden ? C.successBg : C.warnBg, color: g.is_hidden ? C.success : C.warn, fontSize: 11, fontWeight: 800 }}>
+                          {g.is_hidden ? '👁️ Show' : '🙈 Hide'}
+                        </button>
+                        <button onClick={async () => {
+                          if (!window.confirm(`"${g.name}" delete karna chahte hain?`)) return;
+                          const res = await apiCall(`/api/admin/games/${g.id}`, 'DELETE');
+                          if (res.success) { showToast('Game deleted 🗑️'); setGames(prev => prev.filter(item => item.id !== g.id)); }
+                        }} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: C.dangerBg, color: C.danger, fontSize: 11, fontWeight: 800 }}>
+                          🗑️ Del
+                        </button>
+                      </div>
+                      <StatusBadge status={g.status} />
+                      <button onClick={() => toggleGameStatus(g.id, g.status)} style={{ padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 11, background: g.status === 'open' ? C.successBg : C.badgePend, color: g.status === 'open' ? C.success : C.primary, textTransform: 'uppercase' }}>
+                        {g.status === 'open' ? '🟢 Close' : '🔵 Open'}
+                      </button>
                     </div>
                   </div>
-                  <StatusBadge status={g.status} />
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <ActionBtn onClick={() => toggleGameStatus(g.id, g.status)} color={g.status === 'open' ? C.danger : C.success} bg={g.status === 'open' ? C.dangerBg : C.successBg}>
-                    {g.status === 'open' ? '🚫 Close' : '✅ Open'}
-                  </ActionBtn>
-                  <ActionBtn onClick={() => setEditingGame(g)} color={C.primary} bg={C.badgePend}>
-                    ✏️ Edit
-                  </ActionBtn>
-                  <ActionBtn onClick={() => deleteGame(g.id)} color={C.danger} bg={C.dangerBg}>
-                    🗑️ Delete
-                  </ActionBtn>
-                </div>
-              </div>
-            ))}
+              ))
+            }
           </div>
-        )}
+        </>}
 
-        {/* ══════ DEPOSITS ══════ */}
+        {/* ── DEPOSITS ── */}
         {!loading && page === 'deposits' && (
           <div>
-            {deposits.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 40, color: C.textMuted }}>Koi pending deposit nahi hai</div>
-            )}
-            {deposits.map(d => (
-              <DepositCard key={d.id} d={d} onApprove={id => updateDeposit(id, 'approve')} onReject={id => updateDeposit(id, 'reject')} />
-            ))}
+            {deposits.length === 0
+              ? <div style={{ textAlign: 'center', color: C.textMuted, padding: 40, fontWeight: 700 }}>Koi deposit request nahi</div>
+              : deposits.map(d => <DepositCard key={d.id} d={d} onApprove={id => updateDeposit(id, 'approve')} onReject={id => updateDeposit(id, 'reject')} />)}
           </div>
         )}
 
-        {/* ══════ WITHDRAWALS ══════ */}
+        {/* ── WITHDRAWALS ── */}
         {!loading && page === 'withdrawals' && (
           <div>
-            {withdrawals.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 40, color: C.textMuted }}>Koi pending withdrawal nahi hai</div>
-            )}
-            {withdrawals.map(w => (
-              <WithdrawCard key={w.id} w={w} onApprove={id => updateWithdrawal(id, 'approve')} onReject={id => updateWithdrawal(id, 'reject')} />
-            ))}
+            {withdrawals.length === 0
+              ? <div style={{ textAlign: 'center', color: C.textMuted, padding: 40, fontWeight: 700 }}>Koi withdrawal request nahi</div>
+              : withdrawals.map(w => <WithdrawCard key={w.id} w={w} onApprove={id => updateWithdrawal(id, 'approve')} onReject={id => updateWithdrawal(id, 'reject')} />)}
           </div>
         )}
 
-        {/* ══════ ALL BIDS ══════ */}
-        {!loading && page === 'bids' && (
-          <div>
-            {/* Filters */}
-            <div style={{ ...B.card, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <label style={B.label}>Date Filter</label>
-                <input type="date" style={{ ...B.input, marginBottom: 0 }} value={bidFilterDate} onChange={e => setBidFilterDate(e.target.value)} />
-              </div>
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <label style={B.label}>Status</label>
-                <select style={{ ...B.input, marginBottom: 0 }} value={bidFilterStatus} onChange={e => setBidFilterStatus(e.target.value)}>
-                  <option value="all">All</option>
-                  <option value="pending">Pending</option>
-                  <option value="win">Won</option>
-                  <option value="loss">Lost</option>
-                </select>
-              </div>
-              <button onClick={() => { setBidFilterDate(''); setBidFilterStatus('all'); }} style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: C.dangerBg, color: C.danger, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-                🔄 Clear
-              </button>
-            </div>
+        {/* ── BIDS ── */}
+        {!loading && page === 'bids' && (() => {
+         const today = new Date().toISOString().split('T')[0];
 
-            <div style={{ marginTop: 8, marginBottom: 12, fontSize: 13, color: C.textMuted, fontWeight: 700 }}>
-              Showing {filteredBids.length} of {bids.length} bids
-            </div>
+// Last 7 days dates calculate karo
+const last7Days = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date();
+  d.setDate(d.getDate() - i);
+  return d.toISOString().split('T')[0];
+});
 
-            {filteredBids.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 40, color: C.textMuted }}>Koi bid nahi mili</div>
-            )}
+const filteredBids = bids.filter(b => {
+  if (bidFilterDate === 'last7') {
+    let str = String(b.created_at);
+    if (!str.includes('T') && str.includes(' ')) str = str.replace(' ', 'T') + '+05:30';
+    const bidDate = new Date(str).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    if (!last7Days.includes(bidDate)) return false;
+  } else if (bidFilterDate) {
+    let str = String(b.created_at);
+    if (!str.includes('T') && str.includes(' ')) str = str.replace(' ', 'T') + '+05:30';
+    const bidDate = new Date(str).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    if (bidDate !== bidFilterDate) return false;
+  }
+  if (bidFilterStatus !== 'all' && b.status !== bidFilterStatus) return false;
+  return true;
+});
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                <thead>
-                  <tr style={{ background: C.primary, color: '#fff' }}>
-                    {['#', 'User', 'Game', 'Type', 'Number', 'Amount', 'Status', 'Win', 'Time'].map(h => (
-                      <th key={h} style={{ padding: '10px 8px', textAlign: 'left', fontWeight: 800, fontSize: 11, whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredBids.slice(0, 500).map((b, i) => (
-                    <tr key={b.id} style={{ background: i % 2 === 0 ? '#fff' : C.inputBg, borderBottom: `1px solid ${C.cardBorder}` }}>
-                      <td style={{ padding: '8px', fontWeight: 700 }}>{i + 1}</td>
-                      <td style={{ padding: '8px', fontWeight: 700 }}>{b.name || b.mobile || '-'}</td>
-                      <td style={{ padding: '8px' }}>{b.game_name || '-'}</td>
-                      <td style={{ padding: '8px', textTransform: 'capitalize' }}>{b.game_type || '-'}</td>
-                      <td style={{ padding: '8px', fontWeight: 800 }}>{b.number || b.bid_value || '-'}</td>
-                      <td style={{ padding: '8px', fontWeight: 800, color: C.primary }}>₹{Number(b.amount).toLocaleString()}</td>
-                      <td style={{ padding: '8px' }}><StatusBadge status={b.status} /></td>
-                      <td style={{ padding: '8px', fontWeight: 800, color: b.status === 'win' ? C.success : C.textMuted }}>
-                        {b.status === 'win' ? `₹${Number(b.win_amount || b.winning_amount || 0).toLocaleString()}` : '-'}
-                      </td>
-                      <td style={{ padding: '8px', fontSize: 10, color: C.textMuted, whiteSpace: 'nowrap' }}>{toIST(b.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ══════ DECLARE RESULTS ══════ */}
-        {!loading && page === 'results' && (
-          <div>
-            {games.map(g => (
-              <div key={g.id} style={B.card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: C.textMain }}>{g.name}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
-                      🕐 {displayTime(g.open_time)} — {displayTime(g.close_time)}
-                    </div>
-                  </div>
-                  <StatusBadge status={g.status} />
-                </div>
-
-                {/* Already declared result */}
-                {(g.open_result || g.close_result || g.jodi_result) && (
-                  <div style={{ background: C.successBg, border: `1px solid #A5D6A7`, borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, color: C.success, fontWeight: 800, marginBottom: 4 }}>DECLARED RESULT:</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: C.textMain }}>
-                      {g.open_result && <span>Open: <strong style={{ color: C.success }}>{g.open_result}</strong></span>}
-                      {g.open_result && g.close_result && <span style={{ margin: '0 8px' }}>|</span>}
-                      {g.close_result && <span>Close: <strong style={{ color: C.success }}>{g.close_result}</strong></span>}
-                      {g.jodi_result && <span style={{ margin: '0 8px' }}>|</span>}
-                      {g.jodi_result && <span>Jodi: <strong style={{ color: C.primary }}>{g.jodi_result}</strong></span>}
-                    </div>
-                  </div>
-                )}
-
-                {/* Declare Result Form */}
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+return (
+            <div>
+              {/* Date Filter */}
+              <div style={{ ...B.card, marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.textSub, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>📅 Date Filter</div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   <input
-                    style={{ ...B.input, marginBottom: 0, flex: 1, fontSize: 16, fontWeight: 900, textAlign: 'center', letterSpacing: 2 }}
-                    placeholder="128-456"
-                    value={resultForm[g.id] || ''}
-                    onChange={e => setResultForm(rf => ({ ...rf, [g.id]: e.target.value }))}
-                    maxLength={15}
+                    type="date" value={bidFilterDate === 'last7' ? '' : bidFilterDate} max={today}
+                    onChange={e => setBidFilterDate(e.target.value)}
+                    style={{ flex: 1, background: C.inputBg, border: `2px solid ${C.inputBdr}`, borderRadius: 10, padding: '10px 12px', color: C.textMain, fontSize: 14, fontWeight: 600, outline: 'none', boxSizing: 'border-box' }}
                   />
-                  <button
-                    onClick={() => declareResult(g.id)}
-                    disabled={!resultForm[g.id]}
-                    style={{
-                      padding: '12px 20px', borderRadius: 10, border: 'none',
-                      background: resultForm[g.id] ? `linear-gradient(135deg, ${C.success}, #43A047)` : '#E0E0E0',
-                      color: resultForm[g.id] ? '#fff' : '#999',
-                      fontWeight: 800, fontSize: 12, cursor: resultForm[g.id] ? 'pointer' : 'not-allowed',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    🏆 DECLARE
-                  </button>
-                </div>
-                <div style={{ fontSize: 10, color: C.textMuted, marginTop: 6, fontWeight: 600 }}>
-                  Format: Open-Close (e.g. 128-456) | Auto calculate: Digit, Jodi
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ══════ NOTICES ══════ */}
-        {!loading && page === 'notices' && (
-          <div>
-            {/* Add Notice */}
-            <div style={{ ...B.card, marginBottom: 20 }}>
-              <div style={B.title}>➕ Send Notice</div>
-              <textarea
-                style={{ ...B.input, minHeight: 80, resize: 'vertical' }}
-                placeholder="Notice message likho..."
-                value={noticeMsg}
-                onChange={e => setNoticeMsg(e.target.value)}
-              />
-              <button
-                onClick={async () => {
-                  if (!noticeMsg.trim()) { showToast('Message likho!'); return; }
-                  const res = await apiCall('/api/admin/notices', 'POST', { message: noticeMsg.trim() });
-                  if (res.success) { setNoticeMsg(''); showToast('Notice sent ✅'); fetchPageData('notices'); }
-                  else showToast('Error: ' + res.message);
-                }}
-                style={B.btn}
-              >
-                📢 SEND NOTICE
-              </button>
-            </div>
-
-            {/* Notice List */}
-            {notices.map(n => (
-              <div key={n.id} style={B.card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.textMain, flex: 1 }}>{n.message}</div>
-                  <button
-                    onClick={async () => {
-                      const res = await apiCall(`/api/admin/notices/${n.id}`, 'DELETE');
-                      if (res.success) { setNotices(ns => ns.filter(x => x.id !== n.id)); showToast('Notice deleted ✅'); }
-                    }}
-                    style={{ background: C.dangerBg, border: 'none', borderRadius: 8, width: 28, height: 28, cursor: 'pointer', color: C.danger, fontSize: 14, fontWeight: 900, marginLeft: 8, flexShrink: 0 }}
-                  >✕</button>
-                </div>
-                <div style={{ fontSize: 11, color: C.textMuted, fontWeight: 600 }}>
-                  📅 {toIST(n.created_at)}
-                  {n.type && <span style={{ marginLeft: 8 }}>| Type: {n.type}</span>}
-                </div>
-              </div>
-            ))}
-
-            {notices.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 40, color: C.textMuted }}>Koi notice nahi hai</div>
-            )}
-          </div>
-        )}
-
-        {/* ══════ SETTINGS ══════ */}
-        {!loading && page === 'settings' && (
-          <div>
-            {/* Site Settings */}
-            <div style={{ ...B.card, marginBottom: 20 }}>
-              <div style={B.title}>🌐 Site Settings</div>
-
-              <label style={B.label}>Site Name</label>
-              <input style={B.input} value={settings.site_name} onChange={e => setSettings(s => ({ ...s, site_name: e.target.value }))} placeholder="SAKTA MATKA" />
-
-              <label style={B.label}>Site URL</label>
-              <input style={B.input} value={settings.site_url} onChange={e => setSettings(s => ({ ...s, site_url: e.target.value }))} placeholder="https://matkaking.com" />
-
-              <label style={B.label}>UPI ID</label>
-              <input style={B.input} value={settings.upi_id} onChange={e => setSettings(s => ({ ...s, upi_id: e.target.value }))} placeholder="matkaking@paytm" />
-
-              <label style={B.label}>UPI Name</label>
-              <input style={B.input} value={settings.upi_name} onChange={e => setSettings(s => ({ ...s, upi_name: e.target.value }))} placeholder="MatkaKing" />
-
-              <label style={B.label}>WhatsApp Number</label>
-              <input style={B.input} type="tel" value={settings.whatsapp} onChange={e => setSettings(s => ({ ...s, whatsapp: e.target.value }))} placeholder="918767108332" />
-
-              <label style={B.label}>Phone Number</label>
-              <input style={B.input} type="tel" value={settings.phone} onChange={e => setSettings(s => ({ ...s, phone: e.target.value }))} placeholder="918767108332" />
-
-              <label style={B.label}>Telegram Username</label>
-              <input style={B.input} value={settings.telegram} onChange={e => setSettings(s => ({ ...s, telegram: e.target.value }))} placeholder="Matkaboss21" />
-
-              <label style={B.label}>Telegram Channel</label>
-              <input style={B.input} value={settings.telegram_channel} onChange={e => setSettings(s => ({ ...s, telegram_channel: e.target.value }))} placeholder="https://t.me/..." />
-
-              <label style={B.label}>Support Hours</label>
-              <input style={B.input} value={settings.support_hours} onChange={e => setSettings(s => ({ ...s, support_hours: e.target.value }))} placeholder="9 AM - 11 PM" />
-
-              <label style={B.label}>Support Email</label>
-              <input style={B.input} type="email" value={settings.support_email} onChange={e => setSettings(s => ({ ...s, support_email: e.target.value }))} placeholder="support@matkaking.com" />
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={B.label}>Min Deposit</label>
-                  <input style={B.input} type="number" value={settings.min_deposit} onChange={e => setSettings(s => ({ ...s, min_deposit: e.target.value }))} placeholder="100" />
-                </div>
-                <div>
-                  <label style={B.label}>Max Deposit</label>
-                  <input style={B.input} type="number" value={settings.max_deposit} onChange={e => setSettings(s => ({ ...s, max_deposit: e.target.value }))} placeholder="50000" />
-                </div>
-                <div>
-                  <label style={B.label}>Min Withdrawal</label>
-                  <input style={B.input} type="number" value={settings.min_withdrawal} onChange={e => setSettings(s => ({ ...s, min_withdrawal: e.target.value }))} placeholder="500" />
-                </div>
-                <div>
-                  <label style={B.label}>Max Withdrawal</label>
-                  <input style={B.input} type="number" value={settings.max_withdrawal} onChange={e => setSettings(s => ({ ...s, max_withdrawal: e.target.value }))} placeholder="50000" />
-                </div>
-              </div>
-
-              <label style={B.label}>Maintenance Mode</label>
-              <select style={B.input} value={settings.maintenance_mode} onChange={e => setSettings(s => ({ ...s, maintenance_mode: e.target.value }))}>
-                <option value="0">Off — Site Normal</option>
-                <option value="1">On — Site Under Maintenance</option>
-              </select>
-
-              {/* QR Code */}
-              <label style={B.label}>QR Code Image</label>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-                {settings.qr_image ? (
-                  <img src={settings.qr_image} alt="QR" style={{ width: 80, height: 80, borderRadius: 8, border: `1px solid ${C.cardBorder}` }} />
-                ) : autoQrUrl ? (
-                  <img src={autoQrUrl} alt="Auto QR" style={{ width: 80, height: 80, borderRadius: 8, border: `1px solid ${C.cardBorder}` }} />
-                ) : (
-                  <div style={{ width: 80, height: 80, borderRadius: 8, background: C.inputBg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.cardBorder}`, fontSize: 24 }}>📱</div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <input ref={qrFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleQrUpload} />
-                  <button onClick={() => qrFileRef.current?.click()} style={{ ...B.btn, fontSize: 12, padding: '10px' }}>
-                    📷 UPLOAD QR IMAGE
-                  </button>
-                  {settings.qr_image && (
-                    <button onClick={() => setSettings(s => ({ ...s, qr_image: '' }))} style={{ marginTop: 6, width: '100%', padding: '8px', borderRadius: 8, border: 'none', background: C.dangerBg, color: C.danger, fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
-                      🗑️ Remove
+                  {bidFilterDate && (
+                    <button onClick={() => setBidFilterDate('')}
+                      style={{ padding: '10px 14px', background: C.dangerBg, border: `1.5px solid #FFCDD2`, borderRadius: 10, color: C.danger, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+                      ✕ Clear
                     </button>
                   )}
                 </div>
+                {/* Last 7 Days Button */}
+                <div style={{ marginBottom: 10 }}>
+                  <button
+                    onClick={() => setBidFilterDate(bidFilterDate === 'last7' ? '' : 'last7')}
+                    style={{
+                      padding: '9px 18px', borderRadius: 10, cursor: 'pointer', fontWeight: 800,
+                      fontSize: 12, background: bidFilterDate === 'last7'
+                        ? `linear-gradient(135deg,${C.primary},#1976D2)` : C.inputBg,
+                      color: bidFilterDate === 'last7' ? '#fff' : C.textMuted,
+                      border: bidFilterDate === 'last7' ? 'none' : `1.5px solid ${C.cardBorder}`,
+                    }}>
+                    📅 Last 7 Days {bidFilterDate === 'last7' ? '✓' : ''}
+                  </button>
+                </div>
+                {bidFilterDate === 'last7' && (
+                  <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 10 }}>
+                    📅 Last 7 Days ki bids
+                  </div>
+                )}
+                {bidFilterDate && bidFilterDate !== 'last7' && (
+                  <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, marginBottom: 10 }}>
+                    📅 {new Date(bidFilterDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })} ki bids
+                  </div>
+                )}
+                {/* Status Filter */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[['all', 'All'], ['pending', '⏳ Pending'], ['win', '🏆 Won'], ['loss', '💔 Lost']].map(([val, label]) => (
+                    <button key={val} onClick={() => setBidFilterStatus(val)}
+                      style={{ flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer', fontWeight: 800, fontSize: 11, background: bidFilterStatus === val ? `linear-gradient(135deg,${C.primary},#1976D2)` : C.inputBg, color: bidFilterStatus === val ? '#fff' : C.textMuted, border: bidFilterStatus === val ? 'none' : `1.5px solid ${C.cardBorder}`, transition: 'all 0.2s' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {autoQrUrl && !settings.qr_image && (
-                <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, marginBottom: 8 }}>
-                  💡 Auto QR generated from UPI ID. Upload custom QR to override.
+
+              <div style={{ fontSize: 12, color: C.textSub, fontWeight: 800, marginBottom: 10 }}>
+                {filteredBids.length} bids {bidFilterDate === 'last7' ? 'last 7 days ke' : bidFilterDate ? 'is date ke' : 'total (sab)'}
+              </div>
+
+              {filteredBids.length === 0 ? (
+                <div style={{ textAlign: 'center', color: C.textMuted, padding: 40, fontWeight: 700 }}>
+                  {bidFilterDate ? 'Is date pe koi bid nahi' : 'Koi bid nahi mili'}
+                </div>
+              ) : filteredBids.map(b => (
+                <div key={b.id} style={B.card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ fontWeight: 900, color: C.textMain, fontSize: 15 }}>
+                      {b.name} <span style={{ color: C.textSub, fontSize: 12, fontWeight: 600 }}>({b.mobile})</span>
+                    </div>
+                    <StatusBadge status={b.status} />
+                  </div>
+                  <div style={{ background: C.inputBg, borderRadius: 8, padding: '10px 12px', fontSize: 13, color: C.textMain, lineHeight: 1.8, fontWeight: 600, border: `1px solid ${C.cardBorder}` }}>
+                    Game: <strong style={{ color: C.primary }}>{b.game_name}</strong> · Session: <strong style={{ color: C.textSub }}>{b.session?.toUpperCase() || 'N/A'}</strong> · Type: <strong>{b.game_type}</strong><br />
+                    Number: <strong style={{ fontSize: 15 }}>{b.number}</strong> · Amount: <strong style={{ color: C.success, fontSize: 15 }}>₹{Number(b.amount).toLocaleString()}</strong>
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textMuted, marginTop: 10, fontWeight: 600 }}>📅 {toISTlocal(b.created_at)}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* ── DECLARE RESULT ── */}
+        {!loading && page === 'results' && (
+          <div style={B.card}>
+            <div style={B.title}>🏆 Declare Results</div>
+            <div style={{ background: '#E3F2FD', border: `1.5px solid #90CAF9`, borderRadius: 10, padding: 12, color: C.primary, fontSize: 12, marginBottom: 16, fontWeight: 600, lineHeight: 1.6 }}>
+              Format: <strong>OpenPana-ClosePana</strong> (e.g. <code>128-456</code>)<br />
+              Digit auto-calculate hoga. Winners ko winning_balance credit milega.
+            </div>
+            {games.length === 0 ? <div style={{ color: C.textMuted, fontSize: 13, fontWeight: 700, padding: 10 }}>Koi game nahi mila.</div> : games.map(g => (
+              <div key={g.id} style={{ background: C.inputBg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1.5px solid ${C.cardBorder}` }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: C.textMain, marginBottom: 4 }}>{g.name}</div>
+                <div style={{ fontSize: 12, color: C.textSub, marginBottom: 12, fontWeight: 600 }}>
+                  {displayTime(g.open_time)} – {displayTime(g.close_time)} · Result: <strong style={{ color: C.primary, fontSize: 13 }}>{g.open_result || '***'}-{g.jodi_result || '**'}-{g.close_result || '***'}</strong>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <input style={{ ...B.input, flex: 1, marginBottom: 0 }} placeholder="e.g. 128-456" value={resultForm[g.id] || ''} onChange={e => setResultForm(rf => ({ ...rf, [g.id]: e.target.value }))} />
+                  <button style={{ ...B.btn, width: 'auto', padding: '12px 24px', background: 'linear-gradient(135deg, #2E7D32, #43A047)' }} onClick={() => declareResult(g.id)}>SET</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── NOTICES ── */}
+        {!loading && page === 'notices' && (
+          <div style={B.card}>
+            <div style={B.title}>🔔 Send Notification</div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+              <input style={{ ...B.input, flex: 1, marginBottom: 0 }} placeholder="Message likhein..." value={noticeMsg} onChange={e => setNoticeMsg(e.target.value)} />
+              <button style={{ ...B.btn, width: 'auto', padding: '12px 24px' }} onClick={async () => {
+                if (!noticeMsg) return;
+                const res = await apiCall('/api/admin/notices', 'POST', { message: noticeMsg, type: 'info' });
+                if (res.success) { showToast('Notice sent ✅'); setNoticeMsg(''); fetchPageData('notices'); }
+                else showToast('Error: ' + res.message);
+              }}>SEND</button>
+            </div>
+            <div style={B.title}>📋 Active Notifications</div>
+            {notices.length === 0
+              ? <div style={{ color: C.textMuted, fontSize: 13, fontWeight: 700, padding: 10 }}>Koi active notice nahi.</div>
+              : notices.map(n => (
+                <div key={n.id} style={{ background: C.inputBg, padding: 14, borderRadius: 10, marginBottom: 10, borderLeft: `4px solid ${C.primary}`, border: `1px solid ${C.cardBorder}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ color: C.textMain, fontSize: 14, fontWeight: 600, flex: 1, paddingRight: 10 }}>{n.message}</div>
+                  <button onClick={async () => {
+                    if (!window.confirm('Delete this notice?')) return;
+                    const res = await apiCall(`/api/admin/notices/${n.id}`, 'DELETE');
+                    if (res.success) { showToast('Notice deleted ✅'); fetchPageData('notices'); }
+                  }} style={{ background: C.dangerBg, color: C.danger, border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>DEL</button>
+                </div>
+              ))
+            }
+          </div>
+        )}
+
+        {/* ══ SETTINGS ══ */}
+        {!loading && page === 'settings' && (
+          <div>
+            <div style={B.card}>
+              <div style={B.title}>🏷️ Site Identity</div>
+              <label style={B.label}>Site Name</label>
+              <input style={B.input} placeholder="e.g. MATKA BOSS" value={settings.site_name} onChange={e => setSettings(s => ({ ...s, site_name: e.target.value }))} />
+              <label style={B.label}>Site URL (Domain)</label>
+              <input style={B.input} placeholder="https://yourdomain.com" value={settings.site_url} onChange={e => setSettings(s => ({ ...s, site_url: e.target.value }))} />
+              {settings.site_url && (
+                <div style={{ background: '#E3F2FD', borderRadius: 8, padding: '8px 12px', marginTop: -8, marginBottom: 12, fontSize: 12, color: '#1565C0', fontWeight: 600 }}>
+                  🔗 Referral Link: <strong>{settings.site_url}?ref=CODE</strong>
                 </div>
               )}
-
-              <button onClick={saveSettings} disabled={savingSettings} style={{ ...B.btn, marginTop: 8, opacity: savingSettings ? 0.7 : 1 }}>
-                {savingSettings ? '⏳ SAVING...' : settingsSaved ? '✅ SAVED!' : '💾 SAVE ALL SETTINGS'}
-              </button>
             </div>
 
-            {/* Change Password */}
-            <div style={{ ...B.card, marginBottom: 20 }}>
-              <div style={B.title}>🔒 Change Admin Password</div>
-              <label style={B.label}>Current Password</label>
-              <input style={B.input} type="password" placeholder="Current password" value={pwForm.oldPass} onChange={e => setPwForm(f => ({ ...f, oldPass: e.target.value }))} />
-              <label style={B.label}>New Password</label>
-              <input style={B.input} type="password" placeholder="New password (min 6 chars)" value={pwForm.newPass} onChange={e => setPwForm(f => ({ ...f, newPass: e.target.value }))} />
-              <label style={B.label}>Confirm New Password</label>
-              <input style={B.input} type="password" placeholder="Confirm new password" value={pwForm.confirmPass} onChange={e => setPwForm(f => ({ ...f, confirmPass: e.target.value }))} />
-              {pwForm.newPass && pwForm.confirmPass && pwForm.newPass !== pwForm.confirmPass && (
-                <div style={{ color: C.danger, fontSize: 12, fontWeight: 700, marginBottom: 8 }}>❌ Passwords match nahi kar rahe!</div>
+            <div style={B.card}>
+              <div style={B.title}>💳 Payment Settings</div>
+              <label style={B.label}>UPI ID</label>
+              <input style={B.input} placeholder="yourname@upi" value={settings.upi_id} onChange={e => setSettings(s => ({ ...s, upi_id: e.target.value }))} />
+              <label style={B.label}>UPI Display Name</label>
+              <input style={B.input} placeholder="MatkaKing" value={settings.upi_name} onChange={e => setSettings(s => ({ ...s, upi_name: e.target.value }))} />
+
+              <div style={{ background: C.inputBg, border: `1.5px solid ${C.cardBorder}`, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: C.primary, fontWeight: 900, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>📱 QR Code Preview</div>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <div style={{ textAlign: 'center', flex: 1, minWidth: 160 }}>
+                    <div style={{ fontSize: 11, color: C.textSub, fontWeight: 700, marginBottom: 8 }}>AUTO QR (UPI ID se)</div>
+                    {autoQrUrl
+                      ? <img src={autoQrUrl} alt="UPI QR" style={{ width: 160, height: 160, borderRadius: 12, border: `3px solid ${C.primary}`, display: 'block', margin: '0 auto' }} />
+                      : <div style={{ width: 160, height: 160, borderRadius: 12, border: `2px dashed ${C.inputBdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMuted, fontSize: 12, fontWeight: 700, margin: '0 auto' }}>UPI ID daalo ↑</div>
+                    }
+                    {settings.upi_id && <div style={{ fontSize: 12, color: C.textMain, marginTop: 8, fontWeight: 800 }}>{settings.upi_id}</div>}
+                  </div>
+                  <div style={{ textAlign: 'center', flex: 1, minWidth: 160 }}>
+                    <div style={{ fontSize: 11, color: C.textSub, fontWeight: 700, marginBottom: 8 }}>CUSTOM QR (Upload karo)</div>
+                    {settings.qr_image
+                      ? <img src={settings.qr_image} alt="Custom QR" style={{ width: 160, height: 160, borderRadius: 12, border: `3px solid ${C.success}`, display: 'block', margin: '0 auto', objectFit: 'contain', background: '#fff' }} />
+                      : <div style={{ width: 160, height: 160, borderRadius: 12, border: `2px dashed #A5D6A7`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A5D6A7', fontSize: 12, fontWeight: 700, margin: '0 auto', flexDirection: 'column', gap: 8 }}>
+                        <span style={{ fontSize: 32 }}>📷</span>Upload QR
+                      </div>
+                    }
+                    <input ref={qrFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleQrUpload} />
+                    <button onClick={() => qrFileRef.current?.click()} style={{ marginTop: 10, padding: '8px 20px', borderRadius: 10, border: `1.5px solid ${C.success}`, background: C.successBg, color: C.success, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                      📷 {settings.qr_image ? 'Change QR' : 'Upload QR'}
+                    </button>
+                    {settings.qr_image && (
+                      <button onClick={() => setSettings(s => ({ ...s, qr_image: '' }))} style={{ marginTop: 6, padding: '6px 14px', borderRadius: 10, border: 'none', background: C.dangerBg, color: C.danger, fontWeight: 800, fontSize: 11, cursor: 'pointer', display: 'block', margin: '6px auto 0' }}>
+                        ❌ Remove Custom QR
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div style={{ marginTop: 12, background: '#E3F2FD', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: C.primary, fontWeight: 600 }}>
+                  💡 <strong>Note:</strong> Custom QR upload karo toh deposit page pe dikhega. Nahi karo toh Auto QR dikhega.
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {[
+                  { label: 'Min Deposit (₹)', key: 'min_deposit', ph: '100' },
+                  { label: 'Max Deposit (₹)', key: 'max_deposit', ph: '100000' },
+                  { label: 'Min Withdrawal (₹)', key: 'min_withdrawal', ph: '500' },
+                  { label: 'Max Withdrawal (₹)', key: 'max_withdrawal', ph: '50000' },
+                ].map(({ label, key, ph }) => (
+                  <div key={key}>
+                    <label style={B.label}>{label}</label>
+                    <input style={B.input} type="number" placeholder={ph} value={settings[key]} onChange={e => setSettings(s => ({ ...s, [key]: e.target.value }))} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={B.card}>
+              <div style={B.title}>📞 Contact & Support</div>
+              <label style={B.label}>WhatsApp Number (with country code)</label>
+              <input style={B.input} type="tel" placeholder="919665052729" value={settings.whatsapp} onChange={e => setSettings(s => ({ ...s, whatsapp: e.target.value }))} />
+              {settings.whatsapp && (
+                <a href={`https://wa.me/${settings.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-block', marginTop: -6, marginBottom: 12, padding: '6px 16px', borderRadius: 8, background: C.successBg, color: C.success, fontWeight: 800, fontSize: 12, textDecoration: 'none' }}>
+                  🟢 WhatsApp Test karo
+                </a>
               )}
-              <button onClick={changeAdminPassword} disabled={pwSaving} style={{ ...B.btn, opacity: pwSaving ? 0.7 : 1 }}>
-                {pwSaving ? '⏳ CHANGING...' : '🔑 CHANGE PASSWORD'}
-              </button>
+              <label style={B.label}>Phone Number</label>
+              <input style={B.input} type="tel" placeholder="9665052729" value={settings.phone} onChange={e => setSettings(s => ({ ...s, phone: e.target.value }))} />
+              <label style={B.label}>Telegram Username</label>
+              <input style={B.input} placeholder="matkaking_support" value={settings.telegram} onChange={e => setSettings(s => ({ ...s, telegram: e.target.value.replace('@', '') }))} />
+              <label style={B.label}>Telegram Channel (optional)</label>
+              <input style={B.input} placeholder="matkaking_official" value={settings.telegram_channel} onChange={e => setSettings(s => ({ ...s, telegram_channel: e.target.value.replace('@', '') }))} />
+              <label style={B.label}>Support Email (optional)</label>
+              <input style={B.input} type="email" placeholder="support@matkaking.com" value={settings.support_email} onChange={e => setSettings(s => ({ ...s, support_email: e.target.value }))} />
+              <label style={B.label}>Support Hours</label>
+              <input style={B.input} placeholder="Mon–Sat 10AM–8PM" value={settings.support_hours} onChange={e => setSettings(s => ({ ...s, support_hours: e.target.value }))} />
             </div>
 
-            {/* APK Upload */}
-            <div style={{ ...B.card, marginBottom: 20 }}>
-              <div style={B.title}>📱 Android App (APK)</div>
-              <ApkUploadSection showToast={showToast} />
+            {/* ── CHANGE PASSWORD ── */}
+            <div style={B.card}>
+              <div style={B.title}>🔐 Change Admin Password</div>
+              <label style={B.label}>Current Password</label>
+              <input type="password" style={B.input} placeholder="Current password" value={pwForm.oldPass} onChange={e => setPwForm(f => ({ ...f, oldPass: e.target.value }))} />
+              <label style={B.label}>New Password</label>
+              <input type="password" style={B.input} placeholder="Min 6 characters" value={pwForm.newPass} onChange={e => setPwForm(f => ({ ...f, newPass: e.target.value }))} />
+              <label style={B.label}>Confirm New Password</label>
+              <input type="password" style={{ ...B.input, marginBottom: 0 }} placeholder="Dobara likhein" value={pwForm.confirmPass} onChange={e => setPwForm(f => ({ ...f, confirmPass: e.target.value }))} />
+              <button onClick={changeAdminPassword} disabled={pwSaving}
+                style={{ ...B.btn, marginTop: 14, background: pwSaving ? '#90CAF9' : 'linear-gradient(135deg, #6A1B9A, #8E24AA)', opacity: pwSaving ? 0.8 : 1 }}>
+                {pwSaving ? '⏳ CHANGING...' : '🔐 CHANGE PASSWORD'}
+              </button>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 8, textAlign: 'center', fontWeight: 600 }}>
+                Password change hone ke baad auto logout ho jayega
+              </div>
             </div>
+
+            <div style={B.card}>
+              <div style={B.title}>🔧 Maintenance Mode</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div onClick={() => setSettings(s => ({ ...s, maintenance_mode: s.maintenance_mode === '1' ? '0' : '1' }))}
+                  style={{ width: 56, height: 28, borderRadius: 14, background: settings.maintenance_mode === '1' ? C.danger : '#B0BEC5', position: 'relative', cursor: 'pointer', transition: 'background 0.3s', flexShrink: 0 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: settings.maintenance_mode === '1' ? 31 : 3, transition: 'left 0.3s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, color: settings.maintenance_mode === '1' ? C.danger : C.success, fontSize: 14 }}>
+                    {settings.maintenance_mode === '1' ? '🔴 Site Band Hai (Maintenance ON)' : '🟢 Site Chal Rahi Hai (Normal)'}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>ON karo toh users login nahi kar payenge</div>
+                </div>
+              </div>
+            </div>
+
+            <button onClick={saveSettings} disabled={savingSettings} style={{
+              ...B.btn, marginTop: 8, marginBottom: 30,
+              background: settingsSaved ? 'linear-gradient(135deg,#2E7D32,#43A047)' : savingSettings ? '#90CAF9' : B.btn.background,
+              opacity: savingSettings ? 0.8 : 1
+            }}>
+              {savingSettings ? '⏳ SAVING...' : settingsSaved ? '✅ SAVED!' : '💾 SAVE ALL SETTINGS'}
+            </button>
           </div>
         )}
 
