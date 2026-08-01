@@ -18,7 +18,7 @@ router.get('/stats', async (req, res) => {
     const [[pendingWith]]  = await db.query('SELECT COUNT(*) as total, SUM(amount) as volume FROM deposit_requests WHERE type="withdrawal" AND status="pending"');
     const [[totalDeposit]] = await db.query('SELECT SUM(amount) as total FROM deposit_requests WHERE type="deposit" AND status="approved"');
     const [[totalWin]]     = await db.query('SELECT SUM(win_amount) as total FROM bids WHERE status="win"');
-    const [[totalWallet]]  = await db.query('SELECT SUM(wallet_balance) as w, SUM(winning_balance) as ww FROM users');
+    const [[totalWallet]]  = await db.query('SELECT SUM(wallet_balance) as w, SUM(winning_balance) as ww FROM users WHERE role = "user"');
 
     res.json({
       success: true,
@@ -30,7 +30,9 @@ router.get('/stats', async (req, res) => {
         pending_withdrawals: { count: pendingWith.total || 0, volume: pendingWith.volume || 0 },
         total_deposited: totalDeposit.total || 0,
         total_winnings_paid: totalWin.total || 0,
-        platform_wallet_total: (totalWallet.w || 0) + (totalWallet.ww || 0)
+        platform_wallet_total: (totalWallet.w || 0) + (totalWallet.ww || 0),
+        total_wallet_balance: totalWallet.w || 0,
+        total_winning_balance: totalWallet.ww || 0,
       }
     });
   } catch (err) {
