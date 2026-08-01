@@ -499,6 +499,80 @@ function WithdrawCard({ w, onApprove, onReject }) {
   );
 }
 
+function ApkUploadSection({ showToast }) {
+  const [apkInfo, setApkInfo] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    apiCall('/api/admin/apk-info').then(d => {
+      if (d.success) setApkInfo(d);
+    });
+  }, []);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.name.endsWith('.apk')) { showToast('❌ Sirf .apk file upload karo!'); return; }
+    
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('apk', file);
+    
+    try {
+      const token = localStorage.getItem('mk_token');
+      const res = await fetch(`${API}/api/admin/upload-apk`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('✅ APK upload ho gaya!');
+        apiCall('/api/admin/apk-info').then(d => { if (d.success) setApkInfo(d); });
+      } else {
+        showToast('❌ Error: ' + data.message);
+      }
+    } catch { showToast('❌ Upload failed!'); }
+    setUploading(false);
+  };
+
+  const downloadLink = `${API}/download/app`;
+
+  return (
+    <div>
+      {apkInfo?.exists ? (
+        <div style={{ background: C.successBg, border: `1.5px solid #A5D6A7`, borderRadius: 12, padding: 14, marginBottom: 14 }}>
+          <div style={{ fontWeight: 800, color: C.success, fontSize: 14, marginBottom: 4 }}>✅ APK Available</div>
+          <div style={{ fontSize: 12, color: C.textSub, fontWeight: 600 }}>Size: {apkInfo.size}</div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>Updated: {new Date(apkInfo.updated).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
+          <a href={downloadLink} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-block', marginTop: 10, padding: '8px 20px', borderRadius: 10, background: C.primary, color: '#fff', fontWeight: 800, fontSize: 12, textDecoration: 'none' }}>
+            ⬇️ Download Test karo
+          </a>
+        </div>
+      ) : (
+        <div style={{ background: C.warnBg, border: `1.5px solid #FFCC80`, borderRadius: 12, padding: 14, marginBottom: 14 }}>
+          <div style={{ fontWeight: 800, color: C.warn, fontSize: 13 }}>⚠️ Koi APK upload nahi hai abhi</div>
+        </div>
+      )}
+
+      <input ref={fileRef} type="file" accept=".apk" style={{ display: 'none' }} onChange={handleUpload} />
+      <button onClick={() => fileRef.current?.click()} disabled={uploading}
+        style={{ ...B.btn, background: uploading ? '#90CAF9' : 'linear-gradient(135deg, #1565C0, #1976D2)', opacity: uploading ? 0.8 : 1 }}>
+        {uploading ? '⏳ UPLOADING...' : '📤 UPLOAD NEW APK'}
+      </button>
+
+      {apkInfo?.exists && (
+        <div style={{ marginTop: 12, background: C.inputBg, border: `1.5px solid ${C.cardBorder}`, borderRadius: 10, padding: 12 }}>
+          <div style={{ fontSize: 11, color: C.textSub, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase' }}>📋 User Download Link</div>
+          <div style={{ fontSize: 12, color: C.primary, fontWeight: 700, wordBreak: 'break-all' }}>{downloadLink}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── ADMIN LOGIN ──────────────────────────────────────────────
 export function AdminLogin({ onLogin }) {
   const [mobile, setMobile] = useState('');
@@ -1240,7 +1314,11 @@ return (
             }
           </div>
         )}
-
+{/* APK UPLOAD CARD */}
+<div style={B.card}>
+  <div style={B.title}>📱 Android App (APK)</div>
+  <ApkUploadSection apiCall={apiCall} showToast={showToast} />
+</div>
         {/* ══ SETTINGS ══ */}
         {!loading && page === 'settings' && (
           <div>
