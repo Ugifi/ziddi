@@ -640,8 +640,14 @@ export default function AdminPanel({ onLogout }) {
     if (isInitial) setLoading(true);
     const done = () => { if (isInitial) setLoading(false); };
 
-    if (currentPage === 'dashboard') {
-      apiCall('/api/admin/stats').then(d => { if (d.success) { setStats(d.stats); setLastRefresh(new Date()); } done(); }).catch(done);
+   if (currentPage === 'dashboard') {
+  apiCall('/api/admin/stats').then(d => { 
+    if (d.success) { 
+      setStats({...d.stats}); 
+      setLastRefresh(new Date()); 
+    } 
+    done(); 
+  }).catch(done);
     } else if (currentPage === 'users') {
       apiCall('/api/admin/users').then(d => { if (d.success) { setUsers(d.users); setLastRefresh(new Date()); } done(); }).catch(done);
   // NAYA — loading state + error message
@@ -960,7 +966,9 @@ export default function AdminPanel({ onLogout }) {
               { val: '₹' + (stats.pending_withdrawals?.volume || 0).toLocaleString(), label: 'Pending With. Amt', color: '#D84315', icon: '💵' },
               { val: '₹' + (stats.total_deposited || 0).toLocaleString(), label: 'Total Deposited', color: '#0277BD', icon: '🏦' },
               { val: '₹' + (stats.total_winnings_paid || 0).toLocaleString(), label: 'Winnings Paid', color: C.success, icon: '🏆' },
-            ].map((s, i) => (
+{ val: '₹' + parseInt(stats.total_wallet_balance || '0'), label: 'Users Wallet Balance', color: '#0277BD', icon: '💳' },
+{ val: '₹' + parseInt(stats.total_winning_balance || '0'), label: 'Users Winning Balance', color: '#2E7D32', icon: '🏅' },
+{ val: '₹' + (parseInt(stats.total_wallet_balance || '0') + parseInt(stats.total_winning_balance || '0')), label: 'Users Total Balance', color: '#6A1B9A', icon: '📊' },].map((s, i) => (
               <div key={i} style={{ background: C.card, borderRadius: 16, padding: 16, boxShadow: C.cardShadow, border: `1.5px solid ${C.cardBorder}`, borderLeft: `5px solid ${s.color}`, display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 46, height: 46, borderRadius: 12, background: s.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{s.icon}</div>
                 <div>
