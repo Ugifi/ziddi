@@ -670,6 +670,18 @@ export default function AdminPanel({ onLogout }) {
       onLogout();
     }
   }, []);
+  
+    // ── 10 MIN AUTO LOGOUT ─────────────────────────────────────
+  useEffect(() => {
+    if (!adminReady) return;
+    const timer = setTimeout(() => {
+      localStorage.removeItem('mk_token');
+      localStorage.removeItem('mk_admin_user');
+      localStorage.removeItem('mk_admin_logged');
+      onLogout();
+    }, 10 * 60 * 1000);
+    return () => clearTimeout(timer);
+  }, [adminReady]);
 
   const [settings, setSettings] = useState({
     site_name: '', site_url: '', upi_id: '', upi_name: '', whatsapp: '', phone: '',
