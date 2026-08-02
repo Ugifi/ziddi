@@ -184,7 +184,7 @@ const filterGamesByDay = (gamesList) => {
 
     // Open time guzar gaya but result nahi aaya abhi
     if (currentTime >= g.open_time) {
-      return { text: 'Running for close', canPlay: false, className: 'hs-status-running' };
+      return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
     }
 
     // Normal open
