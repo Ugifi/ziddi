@@ -3,7 +3,10 @@ import { GAME_TYPES } from '../data/gameData';
 import { GameIcon } from '../components/Icons';
 
 export default function GameTypePage({ game, onSelect }) {
-  const hasOpenResult = game?.open_result && String(game.open_result).trim() !== '';
+  const now = new Date();
+  const currentTime = now.toTimeString().split(' ')[0];
+  const hasOpenResult = (game?.open_result && String(game.open_result).trim() !== '') || 
+                        (game?.open_time && currentTime >= game.open_time);
 
   const JODI_TYPES = ['jodi', 'jodi_digit', 'jodi_bulk', 'red_jodi', 'cycle_jodi', 'digit_jodi', 'family_jodi'];
 
