@@ -3,6 +3,13 @@ import { GAME_TYPES } from '../data/gameData';
 import { GameIcon } from '../components/Icons';
 
 export default function GameTypePage({ game, onSelect }) {
+  const hasOpenResult = game?.open_result && String(game.open_result).trim() !== '';
+
+  const JODI_TYPES = ['jodi', 'jodi_digit', 'jodi_bulk', 'red_jodi', 'cycle_jodi', 'digit_jodi', 'family_jodi'];
+
+  const visibleTypes = hasOpenResult
+    ? GAME_TYPES.filter(gt => !JODI_TYPES.includes(gt.id))
+    : GAME_TYPES;
   return (
     <div className="gtp-wrap">
       {/* Game Banner */}
@@ -16,7 +23,7 @@ export default function GameTypePage({ game, onSelect }) {
 
       {/* Grid */}
       <div className="gtp-grid">
-        {GAME_TYPES.map((gt, i) => (
+        {visibleTypes.map((gt, i) => (
           <div
             key={gt.id}
             className="gtp-cell anim-in"
