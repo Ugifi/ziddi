@@ -5,6 +5,7 @@
   import Toast from './components/Toast';
   import { DepositModal } from './pages/OtherPages';
   import { WithdrawModal } from './components/Modals';
+import DownloadPage from './pages/DownloadPage';
 
   import HomeScreen from './pages/HomeScreen';
   import GameTypePage from './pages/GameTypePage';
