@@ -108,7 +108,11 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const openDeclared  = !!game.open_result;
   const closeDeclared = !!game.close_result;
 
-  const defaultSession = openDeclared ? 'close' : 'open';
+  const now = new Date();
+  const currentTime = now.toTimeString().split(' ')[0];
+  const openTimePassed = game.open_time && currentTime >= game.open_time;
+
+  const defaultSession = (openDeclared || openTimePassed) ? 'close' : 'open';
   const [openClose, setOpenClose] = useState(defaultSession);
 
   const getCycleJodis = (d) => {
@@ -246,14 +250,14 @@ export default function BetForm({ game, gameType, wallet, onSubmit }) {
   const SessionToggle = () => (
     <div className="bf-fg">
       <label className="bf-label">Select Session</label>
-      {openDeclared && (
+      {(openDeclared || openTimePassed) && (
         <div className="bf-session-notice">
-          ⚠️ Open result declare ho gaya. Sirf <strong>CLOSE</strong> session available hai.
+          ⚠️ Open session band ho gaya. Sirf <strong>CLOSE</strong> session available hai.
         </div>
       )}
       <div className="bf-session-row">
         {['open', 'close'].map(s => {
-          const isDisabled = openDeclared && s === 'open';
+          const isDisabled = (openDeclared || openTimePassed) && s === 'open';
           return (
             <div
               key={s}
