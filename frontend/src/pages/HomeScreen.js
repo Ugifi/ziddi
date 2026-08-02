@@ -179,7 +179,7 @@ const filterGamesByDay = (gamesList) => {
 
     // Open result aa gaya, close abhi baaki
     if (hasOpen) {
-      return { text: 'Running for close', canPlay: false, className: 'hs-status-running' };
+      return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
     }
 
     // Open time guzar gaya but result nahi aaya abhi
