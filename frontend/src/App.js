@@ -5,6 +5,7 @@
   import Toast from './components/Toast';
   import { DepositModal } from './pages/OtherPages';
   import { WithdrawModal } from './components/Modals';
+import DownloadPage from './pages/DownloadPage';
 
   import HomeScreen from './pages/HomeScreen';
   import GameTypePage from './pages/GameTypePage';
@@ -172,8 +173,8 @@
       { ic: '🎮', label: 'All Games',           id: 'home' },
       { ic: '🏆', label: 'Win History',         id: 'bids' },
       { section: 'HELP & SUPPORT' },
-      { ic: '💬', label: 'WhatsApp Support',    id: 'wa',  action: () => window.open('https://wa.me/919999999999','_blank') },
-      { ic: '✈️', label: 'Telegram Support',   id: 'tg',  action: () => window.open('https://t.me/matkaking_support','_blank') },
+      { ic: '💬', label: 'WhatsApp Support',    id: 'wa',  action: () => window.open('https://wa.me/918767108332','_blank') },
+      { ic: '✈️', label: 'Telegram Support',   id: 'tg',  action: () => window.open('https://t.me/Matkaboss21','_blank') },
       { ic: '📖', label: 'How to Play',         id: 'htp' },
       { ic: '🎰', label: 'Game Rates',          id: 'gamerates' },
       { ic: '❓', label: 'FAQ',                 id: 'faq' },
