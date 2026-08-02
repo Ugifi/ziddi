@@ -79,8 +79,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
           g.game_category?.toLowerCase() !== 'disawar'
         );
 
-        setGames(main);
-        setDisawarGames(disawar.length > 0 ? disawar : allGames.filter(g => g.name?.toLowerCase().includes('disawar')));
+      setGames(filterGamesByDay(main));        setDisawarGames(disawar.length > 0 ? disawar : allGames.filter(g => g.name?.toLowerCase().includes('disawar')));
       } catch (err) {
         setGames([
           { id: 1, name: 'STARLINE MORNING', open_time: '09:00:00', close_time: '09:30:00', status: 'open',   result: null },
@@ -95,6 +94,21 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
     };
     fetchGames();
   }, []);
+
+// Day-based game filter
+const filterGamesByDay = (gamesList) => {
+  const day = new Date().getDay(); // 0=Sun, 6=Sat
+  return gamesList.filter(g => {
+    const name = g.name?.toUpperCase() || '';
+    if (day === 0) { // Sunday
+      if (name.includes('MAIN BAZAR') || name.includes('RAJDHANI NIGHT') || name.includes('MILAN NIGHT')) return false;
+    }
+    if (day === 6) { // Saturday
+      if (name.includes('MAIN BAZAR') || name.includes('RAJDHANI NIGHT')) return false;
+    }
+    return true;
+  });
+};
 
   // ✅ 30 Second Delay Logic
   const isTimePassed = (timeStr, delaySeconds = 30) => {
@@ -114,6 +128,12 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   const formatResult = (g) => {
     let openRes = g.open_result;
     let closeRes = g.close_result;
+
+    // 1 AM ke baad results hide karo (reset time)
+    const nowH = new Date().getHours();
+    if (nowH >= 1 && nowH < 6) {
+      return '***-**-***';
+    }
 
     if (openRes && !isTimePassed(g.open_time, 30)) {
       openRes = null;
@@ -159,7 +179,12 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
 
     // Open result aa gaya, close abhi baaki
     if (hasOpen) {
-      return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
+      return { text: 'Running for close', canPlay: false, className: 'hs-status-running' };
+    }
+
+    // Open time guzar gaya but result nahi aaya abhi
+    if (currentTime >= g.open_time) {
+      return { text: 'Running for close', canPlay: false, className: 'hs-status-running' };
     }
 
     // Normal open
