@@ -17,7 +17,7 @@ export default function HomeScreen({ wallet, onAdd, onWith, onPlay, navigate, ap
   });
 
   const banners = [
-    { bg: 'linear-gradient(135deg, #1a3a6e, #2356b0)', text: 'DAILY Disawar', sub: 'Win Big Every Day!', emoji: '🏆', eyebrow: 'MATKAKING PRESENTS' },
+    { bg: 'linear-gradient(135deg, #0f2d5e, #1e4fa0)', text: 'DAILY Disawar', sub: 'Win Big Every Day!', emoji: '🏆', eyebrow: 'MATKAKING PRESENTS' },
     { bg: 'linear-gradient(135deg, #0f2d5e, #1e4fa0)', text: '100% SAFE & TRUSTED', sub: 'Instant Withdrawal', emoji: '🔒', eyebrow: 'MATKAKING PRESENTS' },
     { bg: 'linear-gradient(135deg, #163368, #2a5bbf)', text: 'FAST WITHDRAWAL', sub: 'Instant Money Transfer', emoji: '⚡', eyebrow: 'MATKAKING PRESENTS' },
     { bg: 'linear-gradient(135deg, #0d2a58, #1e4a9e)', text: 'NEW GAMES ADDED', sub: 'Play & Win Now!', emoji: '🎯', eyebrow: 'MATKAKING PRESENTS' },
