@@ -305,7 +305,7 @@ import DownloadPage from './pages/DownloadPage';
           <div style={{ padding:'12px 16px', background:'#EEF4FF', borderBottom:'1px solid #BBDEFB', fontSize:12, fontWeight:800, color:'#1565C0', textTransform:'uppercase', letterSpacing:1 }}>🎧 Help & Support</div>
           <div onClick={() => window.open('https://wa.me/918767108332','_blank')} style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', borderBottom:'1px solid #F0F4FF', cursor:'pointer' }}>
             <div style={{ width:40, height:40, background:'#E8F5E9', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>💬</div>
-            <div style={{ flex:1 }}><div style={{ fontWeight:700, color:'#0D47A1' }}>WhatsApp Support</div><div style={{ fontSize:11, color:'#aaa' }}>+91 9999999999</div></div>
+            <div style={{ flex:1 }}><div style={{ fontWeight:700, color:'#0D47A1' }}>WhatsApp Support</div><div style={{ fontSize:11, color:'#aaa' }}>+91 918767108332</div></div>
             <div style={{ color:'#90CAF9', fontSize:20 }}>›</div>
           </div>
           <div onClick={() => window.open('https://t.me/Matkaboss21','_blank')} style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', cursor:'pointer' }}>
