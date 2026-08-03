@@ -256,12 +256,12 @@ cron.schedule('* * * * *', () => {
 }, { timezone: 'Asia/Kolkata' });
 
 // Raat 12 baje daily reset
-cron.schedule('0 0 * * *', () => {
+cron.schedule('0 1 * * *', () => {
   dailyReset();
 }, { timezone: 'Asia/Kolkata' });
 
 console.log('🤖 [SCHEDULER] MatkaKing Auto Result System STARTED');
 console.log('   → Har minute: open/close result check');
-console.log('   → Raat 12 baje: daily reset');
+console.log('   → Raat 1 baje: daily reset');
 
 module.exports = { declareResult, findBestResult };
