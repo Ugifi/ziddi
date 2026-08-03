@@ -4,18 +4,15 @@ const APK_URL = '/app-debug.apk';
 export default function DownloadPage({ onBack, user }) {
   const [status, setStatus] = useState('idle');
 
- const startDownload = () => {
+ const startDownload = async () => {
   setStatus('downloading');
-  const a = document.createElement('a');
-  a.href = APK_URL;
-  a.download = 'MatkaBoss.apk';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    setStatus('done');
-  }, 1500);
+  try {
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url: 'https://matkaboss.vercel.app/' });
+  } catch {
+    window.open('https://matkaboss.vercel.app/', '_blank');
+  }
+  setTimeout(() => setStatus('done'), 500);
 };
   return (
     <div style={{ minHeight: '100vh', background: '#F0F4FF', fontFamily: "'Nunito','Segoe UI',sans-serif", paddingBottom: 80 }}>
