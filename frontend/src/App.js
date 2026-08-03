@@ -613,7 +613,7 @@ import DownloadPage from './pages/DownloadPage';
   fetchWallet();
   if (id === 'add') setModal('add');
   else if (id === 'with') setModal('with');
-  else if (id === 'download') { setPage('download'); }  // ← YEH LINE ADD KARO
+  else if (id === 'download') { window.open('https://matkaboss.vercel.app/', '_blank'); }  // ← YEH LINE ADD KARO
   else { setPage(id); setSelectedGame(null); setSelectedType(null); setTab(id); }
 };
 
