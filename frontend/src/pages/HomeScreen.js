@@ -129,9 +129,9 @@ const filterGamesByDay = (gamesList) => {
     let openRes = g.open_result;
     let closeRes = g.close_result;
 
-    // 1 AM ke baad results hide karo (reset time)
+    // 2 AM ke baad results hide karo (reset time)
     const nowH = new Date().getHours();
-    if (nowH >= 1 && nowH < 6) {
+    if (nowH >= 2 && nowH < 6) {
       return '***-**-***';
     }
 
