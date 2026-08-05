@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const cron = require('node-cron'); // ✅ Node Cron Added
+const fs = require('fs');
 require('dotenv').config();
 
 const db = require('./config/db');
@@ -17,6 +18,10 @@ const scraperRoutes = require('./routes/scraper');
 const { syncResults } = require('./routes/scraper'); // ✅ Scraper Function Import
 
 const app = express();
+
+// ✅ Ensure uploads/apk directory exists on startup
+const apkDir = path.join(__dirname, 'uploads', 'apk');
+if (!fs.existsSync(apkDir)) fs.mkdirSync(apkDir, { recursive: true });
 
 app.use(helmet());
 app.set('trust proxy', 1);
@@ -50,11 +55,16 @@ app.use('/api/scraper', scraperRoutes);
 
 // APK Public Download (No Auth)
 app.get('/download/app', (req, res) => {
-  const apkPath = path.join(__dirname, 'uploads/apk/matka-app.apk');
-  if (!require('fs').existsSync(apkPath)) {
+  const apkPath = path.join(__dirname, 'uploads', 'apk', 'matka-app.apk');
+  if (!fs.existsSync(apkPath)) {
     return res.status(404).json({ success: false, message: 'APK abhi available nahi hai' });
   }
-  res.download(apkPath, 'MatkaKing.apk');
+  res.download(apkPath, 'MatkaKing.apk', (err) => {
+    if (err) {
+      console.error('APK download error:', err);
+      if (!res.headersSent) res.status(500).json({ success: false, message: 'Download failed' });
+    }
+  });
 });
 
 app.get('/', (req, res) => {
@@ -115,17 +125,7 @@ cron.schedule('* * * * *', async () => {
   }
 });
 
-// ─── CRON JOB: 2 AM Auto Reset (Database Clear) ─────────────────────────────
-// Ye raat ke 2 baje sabhi purane results ko NULL kar dega
-cron.schedule('0 2 * * *', async () => {
-  console.log('⏳ [2 AM Cron] Resetting all game results for the new day...');
-  try {
-    await db.query("UPDATE games SET open_result = NULL, close_result = NULL, jodi_result = NULL, result_date = NULL, status = 'open'");
-    console.log('✅ [2 AM Cron] All games cleared successfully!');
-  } catch (err) {
-    console.error('❌ [2 AM Cron] Reset Error:', err.message);
-  }
-});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ─── CRON JOB: 2 AM Auto Reset (Database Clear) ─────────────────────────────
 // Ye raat ke 2 baje sabhi purane results ko NULL kar dega
