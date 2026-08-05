@@ -162,32 +162,37 @@ const filterGamesByDay = (gamesList) => {
    // ✅ STATUS LOGIC: Backend cron se reset hoga (2 AM IST)
   const getGameStatus = (g) => {
     const now = new Date();
-    const currentTime = now.toTimeString().split(' ')[0]; // "HH:MM:SS"
+    const nowMins = now.getHours() * 60 + now.getMinutes();
 
-    const hasOpen = g.open_result && String(g.open_result).trim() !== '';
+    const toMins = (t) => {
+      if (!t) return 0;
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const hasOpen  = g.open_result  && String(g.open_result).trim()  !== '';
     const hasClose = g.close_result && String(g.close_result).trim() !== '';
 
-    // Dono results aa gaye = band
-    if (hasOpen && hasClose) {
-      return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
+    if (hasOpen && hasClose) return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
+
+    const closeMins = toMins(g.close_time);
+    const openMins  = toMins(g.open_time);
+
+    // Late night games (close time midnight ke baad, jaise 00:30)
+    const isLateNight = closeMins < 6 * 60;
+    const isAfterMidnight = nowMins < 2 * 60;
+
+    let isClosed = false;
+    if (isLateNight && isAfterMidnight) {
+      isClosed = false;
+    } else {
+      isClosed = nowMins >= closeMins;
     }
 
-    // Close time guzar gaya = band
-    if (currentTime >= g.close_time) {
-      return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
-    }
+    if (isClosed) return { text: 'Closed for today', canPlay: false, className: 'hs-status-closed' };
+    if (hasOpen)  return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
+    if (nowMins >= openMins) return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
 
-    // Open result aa gaya, close abhi baaki
-    if (hasOpen) {
-      return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
-    }
-
-    // Open time guzar gaya but result nahi aaya abhi
-    if (currentTime >= g.open_time) {
-      return { text: 'Running for close', canPlay: true, className: 'hs-status-running' };
-    }
-
-    // Normal open
     return { text: 'Market is open', canPlay: true, className: 'hs-status-running' };
   };
 
