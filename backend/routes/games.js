@@ -57,14 +57,19 @@ router.get('/', async (req, res) => {
   try {
     const category = req.query.category || null;
 
-    const matkaDate = getMatkaDate();
-    let query = `SELECT id, name, game_category, open_time, close_time, result_time, status,
-                        CASE WHEN result_date = ? THEN open_result ELSE NULL END as open_result,
-                        CASE WHEN result_date = ? THEN close_result ELSE NULL END as close_result,
-                        CASE WHEN result_date = ? THEN jodi_result ELSE NULL END as jodi_result,
-                        min_bid, max_bid, created_at
-                 FROM games WHERE status != 'deleted'`;
-    const params = [matkaDate, matkaDate, matkaDate];
+   const matkaDate = getMatkaDate();
+const prevDate = (() => {
+  const d = new Date(matkaDate);
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().split('T')[0];
+})();
+let query = `SELECT id, name, game_category, open_time, close_time, result_time, status,
+                    CASE WHEN result_date IN (?, ?) THEN open_result ELSE NULL END as open_result,
+                    CASE WHEN result_date IN (?, ?) THEN close_result ELSE NULL END as close_result,
+                    CASE WHEN result_date IN (?, ?) THEN jodi_result ELSE NULL END as jodi_result,
+                    min_bid, max_bid, created_at
+             FROM games WHERE status != 'deleted'`;
+const params = [matkaDate, prevDate, matkaDate, prevDate, matkaDate, prevDate];
 
     if (category) {
       query += ' AND game_category = ?';
