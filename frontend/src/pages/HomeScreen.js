@@ -130,10 +130,10 @@ const filterGamesByDay = (gamesList) => {
     let closeRes = g.close_result;
 
     // 2 AM ke baad results hide karo (reset time)
-    const nowH = new Date().getHours();
-    if (nowH >= 2 && nowH < 6) {
-      return '***-**-***';
-    }
+   const nowH = new Date().getHours();
+if (nowH >= 1 && nowH < 2) {
+  return '***-**-***';
+}
 
     if (openRes && !isTimePassed(g.open_time, 30)) {
       openRes = null;
