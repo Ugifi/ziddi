@@ -129,7 +129,7 @@ cron.schedule('* * * * *', async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ─── CRON JOB: 2 AM Auto Reset (Database Clear) ─────────────────────────────
 // Ye raat ke 2 baje sabhi purane results ko NULL kar dega
-cron.schedule('0 2 * * *', async () => {
+cron.schedule('0 1 * * *', async () => {
   console.log('⏳ [2 AM Cron] Resetting all game results for the new day...');
   try {
     await db.query("UPDATE games SET open_result = NULL, close_result = NULL, jodi_result = NULL, result_date = NULL, status = 'open'");
